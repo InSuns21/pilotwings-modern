@@ -1,9 +1,4 @@
-export interface FlightInput {
-  readonly pitch: number;
-  readonly roll: number;
-  readonly yaw: number;
-  readonly throttle: number;
-}
+import type { FlightInput } from './FlightInput';
 
 export class KeyboardInput {
   readonly #pressed = new Set<string>();
