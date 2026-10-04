@@ -36,6 +36,7 @@ button {
   background: #07111f;
   user-select: none;
   -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .viewport,
@@ -210,7 +211,7 @@ button {
   background: #0c1b2d;
 }
 
-@media (pointer: coarse), (max-width: 1024px) {
+@media (any-pointer: coarse), (max-width: 1024px) {
   .touch-controls {
     position: absolute;
     right: max(22px, env(safe-area-inset-right));
@@ -242,7 +243,7 @@ button {
   }
 }
 
-@media (pointer: coarse) and (orientation: landscape) and (max-height: 700px) {
+@media (any-pointer: coarse) and (orientation: landscape) and (max-height: 700px) {
   .hud {
     top: max(10px, env(safe-area-inset-top));
     left: max(10px, env(safe-area-inset-left));
