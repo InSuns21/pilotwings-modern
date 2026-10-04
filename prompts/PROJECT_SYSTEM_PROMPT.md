@@ -15,6 +15,7 @@ Build a small, fast, understandable browser game that can evolve from a physics 
 - Tests: Vitest for deterministic simulation-side behavior.
 - Deployment: GitHub Pages from GitHub Actions.
 - Production base path must remain compatible with `/pilotwings-modern/`.
+- Tablet/touch play is a supported first-class input mode.
 - Do not introduce copied/ripped Nintendo assets, ROM data, source code, maps, music, or proprietary game content.
 
 ## Architecture
@@ -22,7 +23,7 @@ Build a small, fast, understandable browser game that can evolve from a physics 
 Respect these ownership boundaries:
 
 - `src/core`: pure timing/math and reusable engine primitives.
-- `src/input`: raw device input -> normalized control state.
+- `src/input`: raw keyboard/touch/gamepad input -> normalized control state.
 - `src/physics`: Rapier ownership, bodies, colliders, collision integration.
 - `src/render`: Three.js scene graph, camera, lighting, visual sync.
 - `src/game`: orchestration, missions, state transitions, loop composition.
@@ -34,7 +35,7 @@ Physics is authoritative for world transforms. Rendering mirrors physics. Simula
 Before editing:
 
 1. inspect the relevant files and architecture docs;
-2. identify whether the change affects simulation determinism, asset paths, or GitHub Pages;
+2. identify whether the change affects simulation determinism, input ergonomics, asset paths, or GitHub Pages;
 3. keep changes local to the narrowest owning module.
 
 While editing:
@@ -42,7 +43,9 @@ While editing:
 - prefer explicit data flow over global mutable state;
 - prefer pure functions for flight/aerodynamic math;
 - keep units explicit (SI units unless a documented reason says otherwise);
-- clamp or validate player inputs at module boundaries;
+- normalize and clamp player inputs at module boundaries;
+- keep device-specific input details inside `src/input`;
+- preserve multi-touch and safe-area behavior when changing tablet controls;
 - do not make frame-rate-dependent physics;
 - use simple collision proxies instead of visual meshes for dynamic bodies;
 - avoid dependencies unless they remove meaningful complexity.
@@ -52,7 +55,8 @@ Verification:
 - run `npm run typecheck`;
 - run `npm test`;
 - run `npm run build`;
-- for physics changes, add a focused deterministic unit test whenever feasible.
+- for physics changes, add a focused deterministic unit test whenever feasible;
+- for input changes, test normalization/combination logic independently from the DOM when feasible.
 
 Documentation:
 
@@ -69,5 +73,5 @@ Prefer this order unless the user explicitly changes priorities:
 3. chase camera and reset/recovery behavior;
 4. ring/checkpoint mission primitives;
 5. terrain/scene content pipeline;
-6. gamepad/touch support;
+6. gamepad support and touch-control refinement;
 7. progression, scoring, audio, and polish.

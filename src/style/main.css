@@ -21,6 +21,8 @@ body,
 
 body {
   overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
 button {
@@ -32,6 +34,9 @@ button {
   width: 100%;
   height: 100%;
   background: #07111f;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .viewport,
@@ -43,8 +48,9 @@ button {
 
 .hud {
   position: absolute;
-  top: 18px;
-  left: 18px;
+  top: max(18px, env(safe-area-inset-top));
+  left: max(18px, env(safe-area-inset-left));
+  z-index: 10;
   display: grid;
   gap: 8px;
   max-width: min(560px, calc(100vw - 36px));
@@ -66,6 +72,10 @@ button {
   font-size: 12px;
 }
 
+.touch-help {
+  display: none;
+}
+
 .hud button {
   width: fit-content;
   padding: 6px 10px;
@@ -80,6 +90,118 @@ button {
   background: rgb(255 255 255 / 14%);
 }
 
+.touch-controls {
+  display: none;
+}
+
+.touch-stick,
+.touch-control-button {
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-stick {
+  position: relative;
+  width: 172px;
+  height: 172px;
+  flex: 0 0 auto;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 50%;
+  background: rgb(7 17 31 / 32%);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 20%), 0 12px 36px rgb(0 0 0 / 18%);
+  backdrop-filter: blur(7px);
+}
+
+.touch-stick-ring {
+  position: absolute;
+  inset: 28px;
+  border: 1px dashed rgb(255 255 255 / 24%);
+  border-radius: 50%;
+}
+
+.touch-stick::before,
+.touch-stick::after {
+  position: absolute;
+  content: "";
+  background: rgb(255 255 255 / 16%);
+  pointer-events: none;
+}
+
+.touch-stick::before {
+  top: 50%;
+  left: 20px;
+  right: 20px;
+  height: 1px;
+}
+
+.touch-stick::after {
+  top: 20px;
+  bottom: 20px;
+  left: 50%;
+  width: 1px;
+}
+
+.touch-stick-knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  width: 58px;
+  height: 58px;
+  border: 2px solid rgb(255 255 255 / 60%);
+  border-radius: 50%;
+  background: rgb(255 241 191 / 72%);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 24%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.touch-stick[data-active="true"] .touch-stick-knob {
+  background: rgb(255 241 191 / 92%);
+}
+
+.touch-stick-label {
+  position: absolute;
+  right: 0;
+  bottom: -24px;
+  left: 0;
+  text-align: center;
+  color: rgb(248 251 255 / 66%);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}
+
+.touch-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(92px, 1fr));
+  grid-template-rows: 58px 88px;
+  gap: 10px;
+  width: min(260px, 38vw);
+}
+
+.touch-control-button {
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 16px;
+  color: #f8fbff;
+  background: rgb(7 17 31 / 48%);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 18%);
+  backdrop-filter: blur(7px);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.touch-control-button[data-active="true"] {
+  border-color: rgb(255 255 255 / 62%);
+  background: rgb(214 77 59 / 78%);
+  transform: translateY(1px);
+}
+
+.touch-thrust {
+  grid-column: 1 / -1;
+  font-size: 16px;
+}
+
 .fatal-error {
   width: min(720px, calc(100% - 40px));
   margin: 80px auto;
@@ -87,4 +209,70 @@ button {
   border: 1px solid rgb(255 255 255 / 15%);
   border-radius: 16px;
   background: #0c1b2d;
+}
+
+@media (any-pointer: coarse), (max-width: 1024px) {
+  .touch-controls {
+    position: absolute;
+    right: max(22px, env(safe-area-inset-right));
+    bottom: max(28px, calc(env(safe-area-inset-bottom) + 18px));
+    left: max(22px, env(safe-area-inset-left));
+    z-index: 12;
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 24px;
+    pointer-events: none;
+  }
+
+  .touch-stick,
+  .touch-actions {
+    pointer-events: auto;
+  }
+
+  .keyboard-help {
+    display: none;
+  }
+
+  .touch-help {
+    display: inline;
+  }
+
+  .hud {
+    max-width: min(420px, calc(100vw - 36px));
+  }
+}
+
+@media (any-pointer: coarse) and (orientation: landscape) and (max-height: 700px) {
+  .hud {
+    top: max(10px, env(safe-area-inset-top));
+    left: max(10px, env(safe-area-inset-left));
+    padding: 10px 12px;
+  }
+
+  .hud span {
+    display: none;
+  }
+
+  .touch-controls {
+    right: max(14px, env(safe-area-inset-right));
+    bottom: max(14px, env(safe-area-inset-bottom));
+    left: max(14px, env(safe-area-inset-left));
+  }
+
+  .touch-stick {
+    width: 136px;
+    height: 136px;
+  }
+
+  .touch-stick-knob {
+    width: 50px;
+    height: 50px;
+  }
+
+  .touch-actions {
+    grid-template-columns: repeat(2, minmax(80px, 1fr));
+    grid-template-rows: 50px 72px;
+    width: min(224px, 36vw);
+  }
 }

@@ -9,13 +9,22 @@ npm install
 npm run dev
 ```
 
-Open the local Vite URL. Controls in the initial sandbox:
+Open the local Vite URL.
+
+Desktop controls:
 
 - `↑ / ↓`: pitch
 - `A / D`: roll
 - `Q / E`: yaw
 - `Space`: thrust
 - `RESET`: restore the aircraft pose
+
+Tablet/touch controls:
+
+- left virtual stick: pitch / roll
+- `YAW ◀` / `YAW ▶`: yaw
+- `THRUST`: thrust while held
+- multi-touch is supported, so stick + thrust + yaw can be used together
 
 ## Verification
 

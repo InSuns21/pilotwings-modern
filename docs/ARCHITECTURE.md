@@ -19,7 +19,7 @@ A browser-first 3D flying game inspired by the feel of Pilotwings, implemented a
 : Framework-independent timing and math. Must stay unit-testable without DOM/WebGL.
 
 `src/input/`
-: Converts devices into normalized pilot commands. Game logic must not read raw key codes directly.
+: Converts keyboard, touch, and future gamepad devices into normalized pilot commands. Device-specific code must not leak into game or physics logic.
 
 `src/physics/`
 : Owns Rapier and collision bodies. Rendering code must not mutate physics bodies directly.
@@ -29,6 +29,14 @@ A browser-first 3D flying game inspired by the feel of Pilotwings, implemented a
 
 `src/game/`
 : Application composition, mission/game-state orchestration, and the render/simulation loop.
+
+## Input rules
+
+- All devices produce the same normalized `FlightInput`.
+- Keyboard and touch inputs may be combined; axes are clamped to `[-1, 1]`.
+- Touch uses Pointer Events so multi-touch, pen, and pointer capture share one implementation.
+- The touch layout must respect safe-area insets and remain usable in tablet portrait and landscape orientations.
+- Touch surfaces disable browser scrolling/zoom gestures only inside the full-screen game experience.
 
 ## Simulation rules
 
@@ -46,7 +54,7 @@ The initial scaffold intentionally leaves these as replaceable modules:
 1. aerodynamic force model;
 2. mission/checkpoint system;
 3. terrain and scenery streaming;
-4. gamepad/touch controls;
+4. gamepad input and touch-control polish;
 5. GLTF aircraft assets and animation;
 6. audio;
 7. save/settings persistence.
