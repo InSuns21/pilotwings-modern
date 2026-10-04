@@ -40,6 +40,7 @@ export class TouchInput {
   readonly #thrust: HTMLElement;
   readonly #yawLeft: HTMLElement;
   readonly #yawRight: HTMLElement;
+  readonly #cleanup: Array<() => void> = [];
 
   #stickPointerId: number | null = null;
   #stickVector: StickVector = { x: 0, y: 0 };
@@ -54,10 +55,11 @@ export class TouchInput {
     this.#yawLeft = this.#require('[data-touch-yaw-left]');
     this.#yawRight = this.#require('[data-touch-yaw-right]');
 
-    this.#stick.addEventListener('pointerdown', this.#onStickPointerDown);
-    this.#stick.addEventListener('pointermove', this.#onStickPointerMove);
-    this.#stick.addEventListener('pointerup', this.#onStickPointerEnd);
-    this.#stick.addEventListener('pointercancel', this.#onStickPointerEnd);
+    this.#listen(this.#stick, 'pointerdown', this.#onStickPointerDown);
+    this.#listen(this.#stick, 'pointermove', this.#onStickPointerMove);
+    this.#listen(this.#stick, 'pointerup', this.#onStickPointerEnd);
+    this.#listen(this.#stick, 'pointercancel', this.#onStickPointerEnd);
+    this.#listen(this.#stick, 'lostpointercapture', this.#onStickPointerEnd);
 
     this.#bindHoldButton(this.#thrust, this.#thrustPointers);
     this.#bindHoldButton(this.#yawLeft, this.#yawLeftPointers);
@@ -76,10 +78,9 @@ export class TouchInput {
   }
 
   dispose(): void {
-    this.#stick.removeEventListener('pointerdown', this.#onStickPointerDown);
-    this.#stick.removeEventListener('pointermove', this.#onStickPointerMove);
-    this.#stick.removeEventListener('pointerup', this.#onStickPointerEnd);
-    this.#stick.removeEventListener('pointercancel', this.#onStickPointerEnd);
+    for (const cleanup of this.#cleanup.splice(0)) {
+      cleanup();
+    }
     this.#resetStick();
     this.#thrustPointers.clear();
     this.#yawLeftPointers.clear();
@@ -92,6 +93,16 @@ export class TouchInput {
       throw new Error(`Touch control element not found: ${selector}`);
     }
     return element;
+  }
+
+  #listen(
+    element: HTMLElement,
+    type: keyof HTMLElementEventMap,
+    listener: (event: PointerEvent) => void
+  ): void {
+    const eventListener = listener as EventListener;
+    element.addEventListener(type, eventListener);
+    this.#cleanup.push(() => element.removeEventListener(type, eventListener));
   }
 
   #bindHoldButton(element: HTMLElement, pointers: Set<number>): void {
@@ -112,10 +123,10 @@ export class TouchInput {
       }
     };
 
-    element.addEventListener('pointerdown', activate);
-    element.addEventListener('pointerup', deactivate);
-    element.addEventListener('pointercancel', deactivate);
-    element.addEventListener('lostpointercapture', deactivate);
+    this.#listen(element, 'pointerdown', activate);
+    this.#listen(element, 'pointerup', deactivate);
+    this.#listen(element, 'pointercancel', deactivate);
+    this.#listen(element, 'lostpointercapture', deactivate);
   }
 
   #onStickPointerDown = (event: PointerEvent): void => {
