@@ -1,5 +1,5 @@
 import RAPIER from '@dimforge/rapier3d-compat';
-import type { FlightInput } from '../input/KeyboardInput';
+import type { FlightInput } from '../input/FlightInput';
 
 const FIXED_DELTA_SECONDS = 1 / 60;
 
