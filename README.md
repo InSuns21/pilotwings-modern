@@ -44,7 +44,9 @@ Tablet/touch controls:
 - `BRAKE`: airbrake in flight / wheel brake after touchdown
 - multi-touch is supported
 
-The flight model is intentionally arcade-stable, but it still requires safe energy and landing management. Releasing thrust produces normal drag; holding BRAKE provides much stronger deceleration for approach and rollout.
+The flight model is intentionally arcade-stable, but it now uses an energy-style longitudinal model. With THRUST off and no pitch input, the aircraft trims into a shallow glide and tends toward roughly 80 km/h instead of losing speed forever. Raising the nose trades speed for altitude; lowering the nose trades altitude for speed. BRAKE remains separate extra drag in flight and stronger wheel braking on the runway.
+
+THRUST remains intentionally binary (pressed / released). There is no staged throttle control in the current baseline.
 
 The aircraft uses an original low-poly trainer model rather than placeholder boxes: tapered fuselage and wings, canopy/pilot, tail surfaces, fixed landing gear, navigation lights, exhaust detail, a three-blade propeller, speed-linked propeller blur, and cast shadows.
 
