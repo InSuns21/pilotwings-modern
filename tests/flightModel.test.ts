@@ -112,6 +112,31 @@ describe('arcade flight model', () => {
     expect(state.flightPathAngle).toBeLessThan(0);
   });
 
+  it('makes a moderate cruise-speed dive produce a visible airspeed gain', () => {
+    let state = {
+      ...createInitialFlightState(),
+      onGround: false,
+      speed: 30,
+      position: { x: 0, y: 200, z: 0 },
+      flightPathAngle: -0.07
+    };
+
+    const initialSpeed = state.speed;
+    const initialAltitude = state.position.y;
+
+    for (let i = 0; i < 3 * 60; i += 1) {
+      state = stepArcadeFlight(
+        state,
+        { ...neutral, pitch: -0.2 },
+        1 / 60
+      );
+    }
+
+    expect(state.speed).toBeGreaterThan(initialSpeed + 1);
+    expect(state.position.y).toBeLessThan(initialAltitude);
+    expect(state.flightPathAngle).toBeLessThan(-0.1);
+  });
+
   it('trades airspeed for altitude when a climb is established', () => {
     let state = {
       ...createInitialFlightState(),
