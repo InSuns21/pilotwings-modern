@@ -11,10 +11,11 @@ import {
   type WorldId
 } from './GameCatalog';
 import {
-  aircraftPreviewSvg,
-  taskPreviewSvg,
-  worldPreviewSvg
-} from './StartScreenPreview';
+  mountAircraftPreview,
+  mountWorldPreview,
+  type StartScreen3dPreview
+} from './StartScreen3dPreview';
+import { taskPreviewSvg } from './StartScreenPreview';
 
 export interface StartScreenController {
   dispose(): void;
@@ -50,7 +51,7 @@ export function mountStartScreen(
           <button class="start-button" type="button" data-start-flight>
             START FLIGHT
           </button>
-          <span class="start-note">図を見ながら選択できます。現在は各カテゴリ1種類です。</span>
+          <span class="start-note">WORLDとAIRCRAFTは実3Dプレビューです。</span>
         </div>
       </section>
     </main>
@@ -59,6 +60,9 @@ export function mountStartScreen(
   const worldSelect = requireSelect<WorldId>(root, '[data-select-world]');
   const aircraftSelect = requireSelect<AircraftId>(root, '[data-select-aircraft]');
   const taskSelect = requireSelect<TaskId>(root, '[data-select-task]');
+  const worldPreviewHost = requireElement(root, '[data-preview-world]');
+  const aircraftPreviewHost = requireElement(root, '[data-preview-aircraft]');
+  const taskPreviewHost = requireElement(root, '[data-preview-task]');
   const summary = root.querySelector<HTMLElement>('[data-selection-summary]');
   const startButton = root.querySelector<HTMLButtonElement>('[data-start-flight]');
 
@@ -67,6 +71,8 @@ export function mountStartScreen(
   }
 
   let disposed = false;
+  let worldPreview: StartScreen3dPreview | null = null;
+  let aircraftPreview: StartScreen3dPreview | null = null;
 
   const currentSelection = (): GameSelection =>
     resolveGameSelection({
@@ -76,27 +82,21 @@ export function mountStartScreen(
     });
 
   const updateCards = (): void => {
-    updateCard(
-      root,
-      'world',
-      WORLDS,
-      worldSelect.value as WorldId,
-      (id) => worldPreviewSvg(id)
-    );
-    updateCard(
-      root,
-      'aircraft',
-      AIRCRAFT,
-      aircraftSelect.value as AircraftId,
-      (id) => aircraftPreviewSvg(id)
-    );
-    updateCard(
-      root,
-      'task',
-      TASKS,
-      taskSelect.value as TaskId,
-      (id) => taskPreviewSvg(id)
-    );
+    const worldId = worldSelect.value as WorldId;
+    const aircraftId = aircraftSelect.value as AircraftId;
+    const taskId = taskSelect.value as TaskId;
+
+    updateCardText(root, 'world', WORLDS, worldId);
+    updateCardText(root, 'aircraft', AIRCRAFT, aircraftId);
+    updateCardText(root, 'task', TASKS, taskId);
+
+    worldPreview?.dispose();
+    worldPreview = mountWorldPreview(worldPreviewHost, worldId);
+
+    aircraftPreview?.dispose();
+    aircraftPreview = mountAircraftPreview(aircraftPreviewHost, aircraftId);
+
+    taskPreviewHost.innerHTML = taskPreviewSvg(taskId);
   };
 
   const updateSummary = (): void => {
@@ -141,6 +141,10 @@ export function mountStartScreen(
   return {
     dispose(): void {
       disposed = true;
+      worldPreview?.dispose();
+      aircraftPreview?.dispose();
+      worldPreview = null;
+      aircraftPreview = null;
       worldSelect.removeEventListener('change', onChange);
       aircraftSelect.removeEventListener('change', onChange);
       taskSelect.removeEventListener('change', onChange);
@@ -182,27 +186,32 @@ function selectorMarkup<Id extends string>(
   `;
 }
 
-function updateCard<Id extends string>(
+function updateCardText<Id extends string>(
   root: HTMLElement,
   kind: string,
   options: readonly CatalogOption<Id>[],
-  id: Id,
-  preview: (id: Id) => string
+  id: Id
 ): void {
   const option = options.find((candidate) => candidate.id === id);
-  const previewElement = root.querySelector<HTMLElement>(`[data-preview-${kind}]`);
   const subtitleElement = root.querySelector<HTMLElement>(`[data-subtitle-${kind}]`);
   const descriptionElement = root.querySelector<HTMLElement>(
     `[data-description-${kind}]`
   );
 
-  if (!option || !previewElement || !subtitleElement || !descriptionElement) {
+  if (!option || !subtitleElement || !descriptionElement) {
     throw new Error(`Start screen card did not initialize: ${kind}`);
   }
 
-  previewElement.innerHTML = preview(id);
   subtitleElement.textContent = option.subtitle;
   descriptionElement.textContent = option.description;
+}
+
+function requireElement(root: HTMLElement, selector: string): HTMLElement {
+  const element = root.querySelector<HTMLElement>(selector);
+  if (!element) {
+    throw new Error(`Start screen element not found: ${selector}`);
+  }
+  return element;
 }
 
 function requireSelect<Id extends string>(
