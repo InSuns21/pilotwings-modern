@@ -12,8 +12,8 @@ export class KeyboardInput {
   sample(): FlightInput {
     return {
       pitch: this.#axis('ArrowDown', 'ArrowUp'),
-      roll: this.#axis('KeyD', 'KeyA'),
-      yaw: this.#axis('KeyE', 'KeyQ'),
+      roll: this.#axis('KeyA', 'KeyD'),
+      yaw: this.#axis('KeyQ', 'KeyE'),
       throttle: this.#pressed.has('Space') ? 1 : 0
     };
   }
