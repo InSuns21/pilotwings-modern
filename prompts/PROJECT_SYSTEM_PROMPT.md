@@ -48,6 +48,8 @@ Controllability remains more important than rigid-body purity, but flight must h
 - Pitch/roll should be bounded and self-stabilizing.
 - Yaw must remain non-oscillatory.
 - Stalls must affect actual flight behavior, not only HUD text.
+- Stall entry and recovery should use hysteresis: once stalled, the aircraft must regain both adequate airspeed and a safe nose attitude before recovery.
+- Around 50 km/h should remain visibly within the current trainer's stall regime unless the aircraft model is deliberately re-tuned.
 - Excessive nose-high attitude must be observable before loss of control.
 - Safe landing limits for forward speed, descent rate, pitch, and roll must be explicit constants.
 - Terrain rendering and terrain collision must share source geometry.
@@ -79,6 +81,8 @@ While editing:
 
 - keep simulation deterministic and fixed-step;
 - keep device-specific input inside `src/input`;
+- preserve a normalized brake input across keyboard, touch, and future gamepad devices;
+- use that brake as airbrake drag in flight and stronger wheel braking on the ground;
 - keep terrain source data in `src/world`;
 - preserve multi-touch and safe-area behavior;
 - avoid dependencies unless they remove meaningful complexity;
