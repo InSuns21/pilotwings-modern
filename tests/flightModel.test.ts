@@ -26,9 +26,10 @@ describe('arcade flight model', () => {
 
     expect(next.onGround).toBe(true);
     expect(next.position.y).toBe(RUNWAY_GROUND_Y);
+    expect(next.flightPathAngle).toBe(0);
   });
 
-  it('lifts off predictably above takeoff speed', () => {
+  it('lifts off with a positive flight path after takeoff speed', () => {
     let state = {
       ...createInitialFlightState(),
       speed: 20
@@ -44,6 +45,7 @@ describe('arcade flight model', () => {
 
     expect(state.onGround).toBe(false);
     expect(state.position.y).toBeGreaterThan(RUNWAY_GROUND_Y);
+    expect(state.flightPathAngle).toBeGreaterThan(0);
   });
 
   it('auto-levels roll after the player releases the stick', () => {
@@ -52,6 +54,7 @@ describe('arcade flight model', () => {
       onGround: false,
       speed: 30,
       position: { x: 0, y: 200, z: 0 },
+      flightPathAngle: -0.04,
       roll: 0.5
     };
 
@@ -68,7 +71,8 @@ describe('arcade flight model', () => {
       ...createInitialFlightState(),
       onGround: false,
       speed: 30,
-      position: { x: 0, y: 200, z: 0 }
+      position: { x: 0, y: 300, z: 0 },
+      flightPathAngle: 0
     };
 
     const initialAltitude = state.position.y;
@@ -80,15 +84,17 @@ describe('arcade flight model', () => {
     expect(state.stalled).toBe(false);
     expect(state.speed).toBeGreaterThan(GLIDE_TRIM_SPEED - 2);
     expect(state.speed).toBeLessThan(GLIDE_TRIM_SPEED + 2);
+    expect(state.flightPathAngle).toBeLessThan(0);
     expect(state.position.y).toBeLessThan(initialAltitude);
   });
 
-  it('trades altitude for airspeed when the nose is lowered', () => {
+  it('trades altitude for airspeed when the flight path is pushed down', () => {
     let state = {
       ...createInitialFlightState(),
       onGround: false,
       speed: GLIDE_TRIM_SPEED,
-      position: { x: 0, y: 200, z: 0 }
+      position: { x: 0, y: 200, z: 0 },
+      flightPathAngle: -0.07
     };
 
     const initialAltitude = state.position.y;
@@ -103,20 +109,22 @@ describe('arcade flight model', () => {
 
     expect(state.speed).toBeGreaterThan(GLIDE_TRIM_SPEED + 2);
     expect(state.position.y).toBeLessThan(initialAltitude);
+    expect(state.flightPathAngle).toBeLessThan(0);
   });
 
-  it('trades airspeed for altitude when the nose is raised', () => {
+  it('trades airspeed for altitude when a climb is established', () => {
     let state = {
       ...createInitialFlightState(),
       onGround: false,
       speed: 25,
-      position: { x: 0, y: 200, z: 0 }
+      position: { x: 0, y: 200, z: 0 },
+      flightPathAngle: -0.04
     };
 
     const initialSpeed = state.speed;
     const initialAltitude = state.position.y;
 
-    for (let i = 0; i < 60; i += 1) {
+    for (let i = 0; i < 2 * 60; i += 1) {
       state = stepArcadeFlight(
         state,
         { ...neutral, pitch: 0.5 },
@@ -126,33 +134,64 @@ describe('arcade flight model', () => {
 
     expect(state.speed).toBeLessThan(initialSpeed);
     expect(state.position.y).toBeGreaterThan(initialAltitude);
+    expect(state.flightPathAngle).toBeGreaterThan(0);
   });
 
-  it('treats 50 km/h as a clear stall instead of the edge of the envelope', () => {
-    const fiftyKph = 50 / 3.6;
-    expect(fiftyKph).toBeLessThan(STALL_SPEED);
-
-    const state = {
+  it('allows a landing flare: nose up while the aircraft is still descending', () => {
+    let state = {
       ...createInitialFlightState(),
       onGround: false,
-      speed: fiftyKph,
-      position: { x: 0, y: 60, z: 0 }
+      speed: 20,
+      position: { x: 300, y: 8, z: 0 },
+      pitch: 0,
+      flightPathAngle: -5 * (Math.PI / 180),
+      verticalSpeed: -1.7
     };
 
-    const next = stepArcadeFlight(state, neutral, 1 / 60);
+    const initialAltitude = state.position.y;
 
-    expect(next.stalled).toBe(true);
-    expect(next.verticalSpeed).toBeLessThan(-6);
+    for (let i = 0; i < 30; i += 1) {
+      state = stepArcadeFlight(
+        state,
+        { ...neutral, pitch: 0.4 },
+        1 / 60
+      );
+    }
+
+    expect(state.pitch).toBeGreaterThan(0);
+    expect(state.flightPathAngle).toBeLessThan(0);
+    expect(state.verticalSpeed).toBeLessThan(0);
+    expect(state.position.y).toBeLessThan(initialAltitude);
   });
 
-  it('keeps the stall latched until speed and pitch are recovered', () => {
+  it('treats 50 km/h as a clear stall and develops a steep descending path', () => {
+    let state = {
+      ...createInitialFlightState(),
+      onGround: false,
+      speed: 50 / 3.6,
+      position: { x: 0, y: 100, z: 0 }
+    };
+
+    expect(state.speed).toBeLessThan(STALL_SPEED);
+
+    for (let i = 0; i < 60; i += 1) {
+      state = stepArcadeFlight(state, neutral, 1 / 60);
+    }
+
+    expect(state.stalled).toBe(true);
+    expect(state.flightPathAngle).toBeLessThan(-0.25);
+    expect(state.verticalSpeed).toBeLessThan(-4);
+  });
+
+  it('keeps the stall latched until speed and angle of attack are recovered', () => {
     let state = {
       ...createInitialFlightState(),
       onGround: false,
       stalled: true,
       speed: STALL_SPEED - 1,
       pitch: 0.2,
-      position: { x: 0, y: 120, z: 0 }
+      flightPathAngle: 0,
+      position: { x: 0, y: 160, z: 0 }
     };
 
     state = stepArcadeFlight(
@@ -182,7 +221,8 @@ describe('arcade flight model', () => {
       ...createInitialFlightState(),
       onGround: false,
       speed: 30,
-      position: { x: 0, y: 100, z: 0 }
+      position: { x: 0, y: 100, z: 0 },
+      flightPathAngle: -0.04
     };
 
     let gliding = state;
@@ -218,7 +258,8 @@ describe('arcade flight model', () => {
       ...createInitialFlightState(),
       onGround: false,
       speed: 30,
-      position: { x: 0, y: 100, z: 0 }
+      position: { x: 0, y: 100, z: 0 },
+      flightPathAngle: -0.04
     };
 
     const headings: number[] = [];

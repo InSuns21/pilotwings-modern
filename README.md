@@ -17,7 +17,7 @@ Unsafe flight is part of the game rather than being silently tolerated:
 - excessive nose-up attitude produces a warning before or during the stall region;
 - mountain and ground impacts end the flight;
 - landing off the runway ends the flight;
-- excessive landing speed, pitch/roll attitude, or descent rate ends the flight;
+- excessive landing speed, bank, descent rate, or genuinely unsafe touchdown attitude ends the flight; moderate nose-up flare is explicitly allowed;
 - crashes freeze the flight and show a GAME OVER state with the failure reason.
 
 ## Development
@@ -44,7 +44,7 @@ Tablet/touch controls:
 - `BRAKE`: airbrake in flight / wheel brake after touchdown
 - multi-touch is supported
 
-The flight model is intentionally arcade-stable, but it now uses an energy-style longitudinal model. With THRUST off and no pitch input, the aircraft trims into a shallow glide and tends toward roughly 80 km/h instead of losing speed forever. Raising the nose trades speed for altitude; lowering the nose trades altitude for speed. BRAKE remains separate extra drag in flight and stronger wheel braking on the runway.
+The flight model is intentionally arcade-stable, but it now separates aircraft attitude from actual flight path. `PITCH` is where the nose points; `PATH` is where the aircraft is actually moving vertically. This allows a real landing flare: the nose can be +8 to +14 degrees while PATH and vertical speed are still negative. With THRUST off and neutral controls, the trainer settles into a shallow glide near roughly 80 km/h instead of losing speed forever. BRAKE remains separate extra drag in flight and stronger wheel braking on the runway.
 
 THRUST remains intentionally binary (pressed / released). There is no staged throttle control in the current baseline.
 
