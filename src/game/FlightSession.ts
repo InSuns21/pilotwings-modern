@@ -17,13 +17,8 @@ import {
   type FlightSafetyState
 } from './FlightSafety';
 import type { GameSelection } from './GameCatalog';
-import {
-  TRAINING_RINGS,
-  createTrainingMission,
-  failTrainingMission,
-  updateTrainingMission,
-  type TrainingMissionProgress
-} from './TrainingMission';
+import type { TrainingMissionProgress } from './TrainingMission';
+import { createTaskRuntime } from './TaskRuntime';
 
 export interface FlightSession {
   dispose(): void;
@@ -195,8 +190,9 @@ export async function createFlightSession(
   const touchInput = new TouchInput(touchControls);
   const physics = await PhysicsWorld.create();
   const renderer = new SceneRenderer(viewport, selection);
+  const taskRuntime = createTaskRuntime(selection.task.id);
 
-  let mission = createTrainingMission();
+  let mission = taskRuntime.createProgress();
   let safety: FlightSafetyState = SAFE_FLIGHT;
   let gameOver = false;
   let disposed = false;
@@ -219,7 +215,7 @@ export async function createFlightSession(
     pitchElement.textContent = Math.round(pitchDegrees(state)).toString();
     flightPathElement.textContent = Math.round(flightPathDegrees(state)).toString();
     verticalSpeedElement.textContent = state.verticalSpeed.toFixed(1);
-    ringsElement.textContent = `${progress.nextRingIndex} / ${TRAINING_RINGS.length}`;
+    ringsElement.textContent = `${progress.nextRingIndex} / ${taskRuntime.ringCount}`;
     phaseElement.textContent = progress.phase.toUpperCase();
     phaseElement.dataset.phase = progress.phase;
     messageElement.textContent = progress.message;
@@ -232,7 +228,7 @@ export async function createFlightSession(
   const restartMission = (): void => {
     physics.resetAircraft();
     renderer.resetCrashEffect();
-    mission = createTrainingMission();
+    mission = taskRuntime.createProgress();
     safety = SAFE_FLIGHT;
     gameOver = false;
     gameOverPanel.hidden = true;
@@ -292,7 +288,7 @@ export async function createFlightSession(
       if (safety.crashReason) {
         gameOver = true;
         const crashMessage = safety.crashMessage ?? 'CRASH';
-        mission = failTrainingMission(mission, crashMessage);
+        mission = taskRuntime.failProgress(mission, crashMessage);
         renderer.setMissionProgress(mission);
         renderer.triggerCrash();
         crashMessageElement.textContent = crashMessage;
@@ -300,7 +296,7 @@ export async function createFlightSession(
         return;
       }
 
-      const nextMission = updateTrainingMission(mission, state);
+      const nextMission = taskRuntime.updateProgress(mission, state);
       if (nextMission !== mission) {
         mission = nextMission;
         renderer.setMissionProgress(mission);
