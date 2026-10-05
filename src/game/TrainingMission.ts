@@ -74,7 +74,7 @@ export function updateTrainingMission(
       return {
         phase: 'landing',
         nextRingIndex: TRAINING_RINGS.length,
-        message: '全リング通過。滑走路の緑の着陸ゾーンへ'
+        message: '全リング通過。BRAKEで減速し、滑走路の緑の着陸ゾーンへ'
       };
     }
 
@@ -84,7 +84,7 @@ export function updateTrainingMission(
         return {
           phase: 'landing',
           nextRingIndex: nextIndex,
-          message: '全リング通過。速度・姿勢・降下率を抑えて緑のゾーンへ着陸'
+          message: '全リング通過。THRUSTを離し、BRAKEで速度を落として緑のゾーンへ着陸'
         };
       }
 
