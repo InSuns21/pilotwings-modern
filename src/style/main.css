@@ -523,50 +523,70 @@ button {
   display: grid;
   place-items: center;
   padding:
-    max(28px, env(safe-area-inset-top))
-    max(24px, env(safe-area-inset-right))
-    max(28px, env(safe-area-inset-bottom))
-    max(24px, env(safe-area-inset-left));
+    max(24px, env(safe-area-inset-top))
+    max(22px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(22px, env(safe-area-inset-left));
   overflow: auto;
+  color: #193247;
   background:
-    radial-gradient(circle at 72% 18%, rgb(91 169 226 / 38%), transparent 34%),
-    linear-gradient(145deg, #0b2036 0%, #0c3550 42%, #102b28 100%);
+    linear-gradient(180deg, #91cff6 0%, #cfeafb 48%, #87a96d 49%, #587449 100%);
 }
 
 .start-panel {
-  width: min(980px, 100%);
-  padding: clamp(24px, 4vw, 48px);
-  border: 1px solid rgb(255 255 255 / 18%);
+  position: relative;
+  width: min(1040px, 100%);
+  padding: clamp(22px, 3.5vw, 42px);
+  overflow: hidden;
+  border: 1px solid rgb(49 88 117 / 22%);
   border-radius: 24px;
-  background: rgb(5 18 31 / 72%);
-  box-shadow: 0 30px 90px rgb(0 0 0 / 34%);
-  backdrop-filter: blur(16px);
+  background: rgb(250 247 229 / 92%);
+  box-shadow: 0 28px 80px rgb(30 58 70 / 28%);
+}
+
+.start-panel::before {
+  position: absolute;
+  top: -70px;
+  right: -34px;
+  width: 260px;
+  height: 160px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 46%);
+  content: "";
+  transform: rotate(-12deg);
+  pointer-events: none;
 }
 
 .start-brand {
-  margin-bottom: 28px;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 24px;
 }
 
 .start-kicker {
-  color: #ffe49a;
+  color: #d94f3d;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: 0.18em;
 }
 
 .start-brand h1 {
-  margin: 8px 0 10px;
-  font-size: clamp(34px, 7vw, 72px);
-  line-height: 0.95;
-  letter-spacing: 0.04em;
+  margin: 7px 0 9px;
+  color: #24455e;
+  font-size: clamp(34px, 6.4vw, 68px);
+  line-height: 0.96;
+  letter-spacing: 0.035em;
+  text-shadow: 0 2px 0 rgb(255 255 255 / 55%);
 }
 
 .start-brand p {
   margin: 0;
-  color: rgb(248 251 255 / 70%);
+  color: #546b76;
 }
 
 .flight-select-grid {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
@@ -574,50 +594,82 @@ button {
 
 .flight-select-card {
   display: grid;
+  grid-template-rows: auto auto auto auto 1fr;
   gap: 10px;
-  min-height: 190px;
-  padding: 18px;
-  border: 1px solid rgb(255 255 255 / 14%);
-  border-radius: 16px;
-  background: rgb(255 255 255 / 6%);
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  border: 1px solid rgb(49 88 117 / 20%);
+  border-radius: 17px;
+  background: #fffdf1;
+  box-shadow: 0 8px 22px rgb(56 76 72 / 10%);
 }
 
 .flight-select-label {
-  color: #93cfff;
+  padding: 0 3px;
+  color: #d94f3d;
   font-size: 10px;
   font-weight: 900;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.17em;
+}
+
+.flight-select-preview {
+  aspect-ratio: 320 / 176;
+  overflow: hidden;
+  border: 1px solid rgb(49 88 117 / 16%);
+  border-radius: 12px;
+  background: #dff2fc;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 40%);
+}
+
+.flight-select-preview svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .flight-select-card strong {
-  min-height: 2.5em;
-  font-size: 18px;
+  min-height: 2.4em;
+  padding: 0 3px;
+  color: #24455e;
+  font-size: 16px;
+  line-height: 1.2;
   letter-spacing: 0.04em;
 }
 
 .flight-select-card select {
   width: 100%;
   padding: 10px 36px 10px 12px;
-  border: 1px solid rgb(255 255 255 / 18%);
+  border: 1px solid rgb(49 88 117 / 24%);
   border-radius: 10px;
-  color: #f8fbff;
-  background: #122b3f;
+  color: #24455e;
+  background: #f3edd4;
   font: inherit;
+  font-weight: 700;
+}
+
+.flight-select-card select:focus-visible {
+  outline: 3px solid rgb(217 79 61 / 28%);
+  outline-offset: 2px;
 }
 
 .flight-select-card small {
-  color: rgb(248 251 255 / 62%);
-  line-height: 1.55;
+  padding: 0 3px 3px;
+  color: #60736f;
+  line-height: 1.5;
 }
 
 .start-summary {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 18px;
-  padding: 12px;
+  margin-top: 16px;
+  padding: 11px 13px;
+  border: 1px solid rgb(49 88 117 / 12%);
   border-radius: 12px;
-  background: rgb(0 0 0 / 18%);
+  background: #e8e0bf;
 }
 
 .start-summary div {
@@ -626,41 +678,56 @@ button {
 }
 
 .start-summary span {
-  color: rgb(248 251 255 / 48%);
+  color: #8a6848;
   font-size: 9px;
+  font-weight: 800;
   letter-spacing: 0.14em;
 }
 
 .start-summary strong {
+  color: #24455e;
   font-size: 12px;
 }
 
 .start-actions {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 18px;
-  margin-top: 22px;
+  margin-top: 19px;
 }
 
 .start-button {
   min-width: 190px;
   padding: 13px 22px;
-  border: 1px solid rgb(255 255 255 / 28%);
+  border: 1px solid #a83b30;
   border-radius: 12px;
-  color: #102035;
-  background: #ffe49a;
+  color: #fffdf1;
+  background: #d94f3d;
+  box-shadow: 0 7px 0 #a83b30, 0 12px 24px rgb(168 59 48 / 18%);
   font-weight: 900;
   letter-spacing: 0.08em;
   cursor: pointer;
 }
 
+.start-button:hover {
+  background: #e7604e;
+}
+
+.start-button:active {
+  box-shadow: 0 3px 0 #a83b30, 0 7px 15px rgb(168 59 48 / 18%);
+  transform: translateY(4px);
+}
+
 .start-button:disabled {
   opacity: 0.6;
   cursor: progress;
+  transform: none;
 }
 
 .start-note {
-  color: rgb(248 251 255 / 52%);
+  color: #697a72;
   font-size: 11px;
 }
 
@@ -688,12 +755,40 @@ button {
 }
 
 @media (max-width: 760px) {
+  .start-screen {
+    display: block;
+  }
+
+  .start-panel {
+    min-height: calc(100vh - 48px);
+  }
+
   .flight-select-grid,
   .start-summary {
     grid-template-columns: 1fr;
   }
 
   .flight-select-card {
+    grid-template-columns: minmax(128px, 42%) minmax(0, 1fr);
+    grid-template-rows: auto auto auto 1fr;
+    align-items: start;
+  }
+
+  .flight-select-label {
+    grid-column: 1 / -1;
+  }
+
+  .flight-select-preview {
+    grid-row: 2 / 5;
+  }
+
+  .flight-select-card strong,
+  .flight-select-card select,
+  .flight-select-card small {
+    grid-column: 2;
+  }
+
+  .flight-select-card strong {
     min-height: 0;
   }
 
@@ -707,7 +802,55 @@ button {
   }
 }
 
+@media (max-width: 520px) {
+  .flight-select-card {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto auto;
+  }
+
+  .flight-select-preview,
+  .flight-select-card strong,
+  .flight-select-card select,
+  .flight-select-card small {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
 @media (any-pointer: coarse) and (orientation: landscape) and (max-height: 700px) {
+  .start-screen {
+    display: block;
+    padding: 12px max(14px, env(safe-area-inset-right)) 12px max(14px, env(safe-area-inset-left));
+  }
+
+  .start-panel {
+    padding: 16px;
+  }
+
+  .start-brand {
+    margin-bottom: 12px;
+  }
+
+  .start-brand h1 {
+    font-size: 36px;
+  }
+
+  .flight-select-card {
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .flight-select-card small {
+    display: none;
+  }
+
+  .start-summary {
+    display: none;
+  }
+
+  .start-actions {
+    margin-top: 12px;
+  }
+
   .session-loadout {
     display: none;
   }
