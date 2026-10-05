@@ -150,6 +150,26 @@ describe('flight safety', () => {
     expect(evaluateFlightSafety(previous, current).crashReason).toBe('hard-landing');
   });
 
+  it('reports water impact outside the island coastline', () => {
+    const previous = {
+      ...createInitialFlightState(),
+      onGround: false,
+      position: { x: 900, y: 1.1, z: 0 },
+      speed: 18,
+      verticalSpeed: -2
+    };
+    const current = {
+      ...previous,
+      onGround: true,
+      position: { x: 900, y: RUNWAY_GROUND_Y, z: 0 },
+      verticalSpeed: 0
+    };
+
+    expect(evaluateFlightSafety(previous, current).crashReason).toBe('water');
+    expect(evaluateFlightSafety(previous, current).crashMessage).toContain('WATER');
+  });
+
+
   it('crashes into mountain terrain', () => {
     const previous = {
       ...createInitialFlightState(),
