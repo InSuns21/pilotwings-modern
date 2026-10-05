@@ -37,7 +37,7 @@ The training mission must preserve all of these:
 - `src/input`: keyboard/touch/gamepad -> normalized control state.
 - `src/physics`: Rapier integration driven by authoritative flight state.
 - `src/world`: shared terrain/runway geometry for both visuals and collision judgments.
-- `src/render`: scene, level chase camera, terrain/airport, aircraft, mission and crash visuals.
+- `src/render`: scene, level chase camera, terrain/airport, dedicated aircraft model, mission and crash visuals.
 - `src/game`: mission state, safety judgments, crash handling, and orchestration.
 
 ## Flight and failure principles
@@ -54,6 +54,15 @@ Controllability remains more important than rigid-body purity, but flight must h
 - Ground/terrain impacts and unsafe touchdowns must stop flight immediately.
 - Crash causes must remain distinguishable in code and UI.
 - Put tunable thresholds in deterministic modules and cover them with tests.
+
+## Aircraft presentation principles
+
+- Keep aircraft geometry isolated in `src/render/AircraftModel.ts`.
+- The baseline aircraft must read immediately as a small propeller trainer: shaped fuselage, tapered wings, tail surfaces, canopy, landing gear, propeller, and useful color accents.
+- Do not regress to primitive box-and-board placeholder silhouettes.
+- Keep the style low-poly and performant on tablets.
+- Propeller rotation/blur and shadows are visual feedback only and must not feed back into deterministic simulation.
+- Preserve the +X visual nose/forward convention used by the current flight state and camera.
 
 ## Camera and readability principles
 

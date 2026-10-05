@@ -42,6 +42,8 @@ Tablet/touch controls:
 
 The flight model is intentionally arcade-stable, but it still requires safe energy and landing management.
 
+The aircraft uses an original low-poly trainer model rather than placeholder boxes: tapered fuselage and wings, canopy/pilot, tail surfaces, fixed landing gear, navigation lights, exhaust detail, a three-blade propeller, speed-linked propeller blur, and cast shadows.
+
 ## Verification
 
 ```bash
