@@ -4,74 +4,97 @@ You are working in the `pilotwings-modern` repository: an original browser-based
 
 ## Mission
 
-Build a small, fast, understandable browser game that can evolve from a physics sandbox into mission-based flight challenges while remaining deployable as static files on GitHub Pages.
+Build a small, fast, understandable browser game centered on controllable mission flight while remaining deployable as static files on GitHub Pages.
 
 ## Hard constraints
 
 - Runtime: modern desktop/mobile browsers; no server is required for the core game.
 - Language/build: TypeScript + Vite.
 - Rendering: Three.js.
-- Rigid-body physics/contact: Rapier 3D WASM.
-- Tests: Vitest for deterministic simulation-side behavior.
+- Rapier 3D WASM remains available for aircraft/world collision integration.
+- Tests: Vitest for deterministic timing, input, flight, and mission behavior.
 - Deployment: GitHub Pages from GitHub Actions.
 - Production base path must remain compatible with `/pilotwings-modern/`.
 - Tablet/touch play is a supported first-class input mode.
 - Do not introduce copied/ripped Nintendo assets, ROM data, source code, maps, music, or proprietary game content.
 
+## Current playable loop
+
+The baseline mission is:
+
+1. start on the runway;
+2. accelerate and take off;
+3. pass the ordered ring course;
+4. descend and land inside the marked runway landing zone.
+
+Do not regress this loop when adding features.
+
 ## Architecture
 
 Respect these ownership boundaries:
 
-- `src/core`: pure timing/math and reusable engine primitives.
+- `src/core`: timing and reusable engine primitives.
+- `src/flight`: deterministic arcade flight state/control law.
 - `src/input`: raw keyboard/touch/gamepad input -> normalized control state.
-- `src/physics`: Rapier ownership, bodies, colliders, collision integration.
-- `src/render`: Three.js scene graph, camera, lighting, visual sync.
-- `src/game`: orchestration, missions, state transitions, loop composition.
+- `src/physics`: Rapier integration driven by authoritative flight state.
+- `src/render`: Three.js scene, level chase camera, ground/airport, aircraft, mission visuals.
+- `src/game`: mission state and orchestration.
 
-Physics is authoritative for world transforms. Rendering mirrors physics. Simulation runs at a fixed timestep independent from rendering.
+## Flight-control principles
+
+Controllability is more important than rigid-body purity for the baseline game.
+
+- Do not control the aircraft by feeding raw pitch/roll/yaw torques directly into a free rigid body.
+- Pitch and roll should behave as bounded target attitudes and return toward level when input is released.
+- Yaw should command a bounded heading/turn rate and must not oscillate after release.
+- Bank should contribute to coordinated turning.
+- Keep takeoff, low-speed sink, landing, and maximum control authority predictable.
+- Preserve positive-axis semantics: pitch up, roll right, yaw right.
+- Put tunable flight constants in the deterministic flight module and cover meaningful behavior with tests.
+
+## Camera and readability principles
+
+- Keep the default chase camera horizon-stable; do not inherit aircraft roll/pitch.
+- Follow heading so the camera always looks in the direction of travel.
+- Preserve a stable center reference/reticle.
+- Ground motion and altitude must be visually readable through tiles, markings, scenery, shadows, or equivalent cues.
+- Preserve visible runway and landing-zone guidance.
 
 ## Working rules
 
 Before editing:
 
-1. inspect the relevant files and architecture docs;
-2. identify whether the change affects simulation determinism, input ergonomics, asset paths, or GitHub Pages;
+1. inspect relevant files and architecture docs;
+2. identify effects on controllability, camera readability, mission completion, input ergonomics, asset paths, and GitHub Pages;
 3. keep changes local to the narrowest owning module.
 
 While editing:
 
 - prefer explicit data flow over global mutable state;
-- prefer pure functions for flight/aerodynamic math;
-- keep units explicit (SI units unless a documented reason says otherwise);
-- normalize and clamp player inputs at module boundaries;
+- keep simulation deterministic and fixed-step;
 - keep device-specific input details inside `src/input`;
-- preserve multi-touch and safe-area behavior when changing tablet controls;
-- do not make frame-rate-dependent physics;
-- use simple collision proxies instead of visual meshes for dynamic bodies;
-- avoid dependencies unless they remove meaningful complexity.
+- preserve multi-touch and safe-area behavior;
+- avoid dependencies unless they remove meaningful complexity;
+- prefer procedural/original assets for baseline scenery.
 
 Verification:
 
 - run `npm run typecheck`;
 - run `npm test`;
 - run `npm run build`;
-- for physics changes, add a focused deterministic unit test whenever feasible;
-- for input changes, test normalization/combination logic independently from the DOM when feasible.
+- add focused tests when changing flight dynamics, mission gates, or input normalization.
 
 Documentation:
 
-- update `docs/ARCHITECTURE.md` when dependencies or module boundaries change;
+- update `docs/ARCHITECTURE.md` when module boundaries or simulation responsibilities change;
 - update `docs/DEVELOPMENT_RULES.md` when a durable workflow rule changes;
 - leave the repository understandable without relying on chat transcripts.
 
 ## Near-term roadmap
 
-Prefer this order unless the user explicitly changes priorities:
-
-1. stable game loop and input abstraction;
-2. flight-force model separated from collision physics;
-3. chase camera and reset/recovery behavior;
-4. ring/checkpoint mission primitives;
-5. terrain/scene content pipeline;
-6. gamepad support and touch-control refinement;
-7. progression, scoring, audio, and polish.
+1. tune training mission from real tablet play;
+2. add touchdown/crash scoring and runway feedback;
+3. add gamepad support;
+4. add additional ring/landing missions;
+5. improve scenery and aircraft assets;
+6. add progression, scoring, audio, and polish.
