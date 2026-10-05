@@ -516,3 +516,199 @@ button {
     box-shadow: 0 0 18px rgb(255 126 69 / 28%);
   }
 }
+
+
+.start-screen {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding:
+    max(28px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right))
+    max(28px, env(safe-area-inset-bottom))
+    max(24px, env(safe-area-inset-left));
+  overflow: auto;
+  background:
+    radial-gradient(circle at 72% 18%, rgb(91 169 226 / 38%), transparent 34%),
+    linear-gradient(145deg, #0b2036 0%, #0c3550 42%, #102b28 100%);
+}
+
+.start-panel {
+  width: min(980px, 100%);
+  padding: clamp(24px, 4vw, 48px);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 24px;
+  background: rgb(5 18 31 / 72%);
+  box-shadow: 0 30px 90px rgb(0 0 0 / 34%);
+  backdrop-filter: blur(16px);
+}
+
+.start-brand {
+  margin-bottom: 28px;
+}
+
+.start-kicker {
+  color: #ffe49a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.start-brand h1 {
+  margin: 8px 0 10px;
+  font-size: clamp(34px, 7vw, 72px);
+  line-height: 0.95;
+  letter-spacing: 0.04em;
+}
+
+.start-brand p {
+  margin: 0;
+  color: rgb(248 251 255 / 70%);
+}
+
+.flight-select-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.flight-select-card {
+  display: grid;
+  gap: 10px;
+  min-height: 190px;
+  padding: 18px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 6%);
+}
+
+.flight-select-label {
+  color: #93cfff;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.flight-select-card strong {
+  min-height: 2.5em;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+
+.flight-select-card select {
+  width: 100%;
+  padding: 10px 36px 10px 12px;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 10px;
+  color: #f8fbff;
+  background: #122b3f;
+  font: inherit;
+}
+
+.flight-select-card small {
+  color: rgb(248 251 255 / 62%);
+  line-height: 1.55;
+}
+
+.start-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgb(0 0 0 / 18%);
+}
+
+.start-summary div {
+  display: grid;
+  gap: 3px;
+}
+
+.start-summary span {
+  color: rgb(248 251 255 / 48%);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+}
+
+.start-summary strong {
+  font-size: 12px;
+}
+
+.start-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.start-button {
+  min-width: 190px;
+  padding: 13px 22px;
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 12px;
+  color: #102035;
+  background: #ffe49a;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.start-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.start-note {
+  color: rgb(248 251 255 / 52%);
+  font-size: 11px;
+}
+
+.session-loadout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.session-loadout span {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.session-loadout b {
+  color: #fff;
+  letter-spacing: 0;
+}
+
+.hud-actions,
+.game-over-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 760px) {
+  .flight-select-grid,
+  .start-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .flight-select-card {
+    min-height: 0;
+  }
+
+  .start-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .start-button {
+    width: 100%;
+  }
+}
+
+@media (any-pointer: coarse) and (orientation: landscape) and (max-height: 700px) {
+  .session-loadout {
+    display: none;
+  }
+}
