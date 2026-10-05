@@ -30,8 +30,10 @@ export const MAX_SPEED = 52;
 export const STALL_SPEED = 16;
 export const STALL_RECOVERY_SPEED = 18;
 export const STALL_PITCH = 22 * (Math.PI / 180);
+export const GLIDE_TRIM_SPEED = 22;
 
 const DEG = Math.PI / 180;
+const GRAVITY = 9.81;
 const MAX_PITCH = 30 * DEG;
 const MAX_ROLL = 38 * DEG;
 const AIR_PITCH_RATE = 48 * DEG;
@@ -42,8 +44,17 @@ const DIRECT_YAW_RATE = 28 * DEG;
 const BANK_TURN_RATE = 52 * DEG;
 const STALL_RECOVERY_PITCH = 12 * DEG;
 const HIGH_PITCH_STALL_MAX_SPEED = 30;
+const GLIDE_TRIM_PITCH = -4 * DEG;
+const PITCH_INPUT_DEAD_ZONE = 0.05;
+const THRUST_ACCELERATION = 11;
 const AIRBRAKE_DECELERATION = 8.5;
 const GROUND_BRAKE_DECELERATION = 18;
+const GROUND_COAST_DECELERATION = 5.5;
+const STALL_EXTRA_DRAG = 1.2;
+const STALL_EXTRA_SINK = 6;
+const PARASITE_DRAG_COEFFICIENT =
+  (GRAVITY * Math.sin(Math.abs(GLIDE_TRIM_PITCH))) /
+  (GLIDE_TRIM_SPEED * GLIDE_TRIM_SPEED);
 
 export function createInitialFlightState(): FlightState {
   return {
@@ -70,15 +81,13 @@ export function stepArcadeFlight(
   const rollInput = clamp(input.roll, -1, 1);
   const yawInput = clamp(input.yaw, -1, 1);
 
-  const coastingDeceleration =
-    throttle > 0.001 ? 0 : state.onGround ? 5.5 : 2;
-  const brakeDeceleration =
-    brake * (state.onGround ? GROUND_BRAKE_DECELERATION : AIRBRAKE_DECELERATION);
-  const acceleration =
-    throttle * 11 - coastingDeceleration - brakeDeceleration;
-  let speed = clamp(state.speed + acceleration * dt, 0, MAX_SPEED);
-
-  const pitchTarget = pitchInput * MAX_PITCH;
+  const pitchTarget = state.onGround
+    ? pitchInput * MAX_PITCH
+    : Math.abs(pitchInput) > PITCH_INPUT_DEAD_ZONE
+      ? pitchInput * MAX_PITCH
+      : throttle > 0.001
+        ? 0
+        : GLIDE_TRIM_PITCH;
   const rollTarget = state.onGround ? 0 : rollInput * MAX_ROLL;
 
   let pitch = moveTowards(state.pitch, pitchTarget, AIR_PITCH_RATE * dt);
@@ -86,18 +95,42 @@ export function stepArcadeFlight(
 
   const enteringStall =
     !state.onGround &&
-    (speed < STALL_SPEED ||
-      (pitch > STALL_PITCH && speed < HIGH_PITCH_STALL_MAX_SPEED));
-  const recoveredFromStall =
-    speed >= STALL_RECOVERY_SPEED && pitch <= STALL_RECOVERY_PITCH;
-  const stalled =
-    !state.onGround &&
-    (state.stalled ? !recoveredFromStall : enteringStall);
+    (state.speed < STALL_SPEED ||
+      (pitch > STALL_PITCH && state.speed < HIGH_PITCH_STALL_MAX_SPEED));
+  const wasStalled = state.stalled;
+  let stalled = !state.onGround && (wasStalled || enteringStall);
 
   if (stalled) {
     pitch = moveTowards(pitch, -11 * DEG, STALL_PITCH_DOWN_RATE * dt);
     roll = moveTowards(roll, 0, AIR_ROLL_RATE * 0.7 * dt);
-    speed = clamp(speed + 2.5 * dt, 0, MAX_SPEED);
+  }
+
+  let acceleration: number;
+  if (state.onGround) {
+    const driveAcceleration =
+      throttle > 0.001 ? throttle * THRUST_ACCELERATION : -GROUND_COAST_DECELERATION;
+    acceleration = driveAcceleration - brake * GROUND_BRAKE_DECELERATION;
+  } else {
+    const gravityAlongFlightPath = -GRAVITY * Math.sin(pitch);
+    const parasiteDrag = PARASITE_DRAG_COEFFICIENT * state.speed * state.speed;
+    const stallDrag = stalled ? STALL_EXTRA_DRAG : 0;
+
+    acceleration =
+      throttle * THRUST_ACCELERATION +
+      gravityAlongFlightPath -
+      parasiteDrag -
+      brake * AIRBRAKE_DECELERATION -
+      stallDrag;
+  }
+
+  const speed = clamp(state.speed + acceleration * dt, 0, MAX_SPEED);
+
+  if (
+    wasStalled &&
+    speed >= STALL_RECOVERY_SPEED &&
+    pitch <= STALL_RECOVERY_PITCH
+  ) {
+    stalled = false;
   }
 
   const speedFactor = clamp(speed / 32, 0.25, 1.15);
@@ -154,7 +187,7 @@ export function stepArcadeFlight(
   }
 
   const lowSpeedSink = Math.max(0, STALL_SPEED - speed) * 0.9;
-  const stallSink = stalled ? 7 : 0;
+  const stallSink = stalled ? STALL_EXTRA_SINK : 0;
   const verticalSpeed = speed * Math.sin(pitch) - lowSpeedSink - stallSink;
   const nextY = state.position.y + verticalSpeed * dt;
 
