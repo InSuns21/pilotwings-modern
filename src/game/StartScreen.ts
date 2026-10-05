@@ -5,10 +5,16 @@ import {
   WORLDS,
   resolveGameSelection,
   type AircraftId,
+  type CatalogOption,
   type GameSelection,
   type TaskId,
   type WorldId
 } from './GameCatalog';
+import {
+  aircraftPreviewSvg,
+  taskPreviewSvg,
+  worldPreviewSvg
+} from './StartScreenPreview';
 
 export interface StartScreenController {
   dispose(): void;
@@ -44,7 +50,7 @@ export function mountStartScreen(
           <button class="start-button" type="button" data-start-flight>
             START FLIGHT
           </button>
-          <span class="start-note">現在は各カテゴリ1種類。選択枠は追加コンテンツ用に拡張可能です。</span>
+          <span class="start-note">図を見ながら選択できます。現在は各カテゴリ1種類です。</span>
         </div>
       </section>
     </main>
@@ -69,6 +75,30 @@ export function mountStartScreen(
       taskId: taskSelect.value as TaskId
     });
 
+  const updateCards = (): void => {
+    updateCard(
+      root,
+      'world',
+      WORLDS,
+      worldSelect.value as WorldId,
+      (id) => worldPreviewSvg(id)
+    );
+    updateCard(
+      root,
+      'aircraft',
+      AIRCRAFT,
+      aircraftSelect.value as AircraftId,
+      (id) => aircraftPreviewSvg(id)
+    );
+    updateCard(
+      root,
+      'task',
+      TASKS,
+      taskSelect.value as TaskId,
+      (id) => taskPreviewSvg(id)
+    );
+  };
+
   const updateSummary = (): void => {
     const selection = currentSelection();
     summary.innerHTML = `
@@ -78,7 +108,11 @@ export function mountStartScreen(
     `;
   };
 
-  const onChange = (): void => updateSummary();
+  const onChange = (): void => {
+    updateCards();
+    updateSummary();
+  };
+
   worldSelect.addEventListener('change', onChange);
   aircraftSelect.addEventListener('change', onChange);
   taskSelect.addEventListener('change', onChange);
@@ -101,6 +135,7 @@ export function mountStartScreen(
   };
 
   startButton.addEventListener('click', onClick);
+  updateCards();
   updateSummary();
 
   return {
@@ -117,7 +152,7 @@ export function mountStartScreen(
 function selectorMarkup<Id extends string>(
   label: string,
   kind: string,
-  options: readonly { id: Id; name: string; subtitle: string; description: string }[],
+  options: readonly CatalogOption<Id>[],
   selectedId: Id
 ): string {
   const optionMarkup = options
@@ -135,15 +170,39 @@ function selectorMarkup<Id extends string>(
   }
 
   return `
-    <label class="flight-select-card">
+    <label class="flight-select-card" data-card-${kind}>
       <span class="flight-select-label">${label}</span>
-      <strong>${selected.subtitle}</strong>
+      <div class="flight-select-preview" data-preview-${kind}></div>
+      <strong data-subtitle-${kind}>${selected.subtitle}</strong>
       <select data-select-${kind} aria-label="${label} selection">
         ${optionMarkup}
       </select>
-      <small>${selected.description}</small>
+      <small data-description-${kind}>${selected.description}</small>
     </label>
   `;
+}
+
+function updateCard<Id extends string>(
+  root: HTMLElement,
+  kind: string,
+  options: readonly CatalogOption<Id>[],
+  id: Id,
+  preview: (id: Id) => string
+): void {
+  const option = options.find((candidate) => candidate.id === id);
+  const previewElement = root.querySelector<HTMLElement>(`[data-preview-${kind}]`);
+  const subtitleElement = root.querySelector<HTMLElement>(`[data-subtitle-${kind}]`);
+  const descriptionElement = root.querySelector<HTMLElement>(
+    `[data-description-${kind}]`
+  );
+
+  if (!option || !previewElement || !subtitleElement || !descriptionElement) {
+    throw new Error(`Start screen card did not initialize: ${kind}`);
+  }
+
+  previewElement.innerHTML = preview(id);
+  subtitleElement.textContent = option.subtitle;
+  descriptionElement.textContent = option.description;
 }
 
 function requireSelect<Id extends string>(
