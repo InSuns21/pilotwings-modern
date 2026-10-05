@@ -42,7 +42,7 @@ interface LandingGuideTargets {
 
 const APPROACH_TARGETS: LandingGuideTargets = {
   speed: [70, 90],
-  pitch: [-6, 4],
+  pitch: [-4, 4],
   path: [-12, -4],
   verticalSpeed: [-4.8, -1.5],
   bank: 8
