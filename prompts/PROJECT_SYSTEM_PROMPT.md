@@ -56,6 +56,11 @@ Controllability remains more important than rigid-body purity, but flight must h
 - Ground/terrain impacts and unsafe touchdowns must stop flight immediately.
 - Crash causes must remain distinguishable in code and UI.
 - Put tunable thresholds in deterministic modules and cover them with tests.
+- Do not reintroduce a fixed airborne coasting deceleration such as a constant `-2 m/s²`.
+- Airborne longitudinal speed should follow an energy-style model: binary thrust + gravity along the flight path - speed-dependent drag - brake/stall drag.
+- With THRUST off and neutral pitch input, the current trainer should naturally trim into a shallow glide and settle near its configured glide speed instead of bleeding speed indefinitely.
+- Nose-up must trade speed for altitude; nose-down must trade altitude for speed.
+- Keep THRUST binary unless the user explicitly requests a staged/analog throttle model.
 
 ## Aircraft presentation principles
 
