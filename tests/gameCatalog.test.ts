@@ -8,8 +8,8 @@ import {
 } from '../src/game/GameCatalog';
 
 describe('game catalog', () => {
-  it('provides one selectable world, aircraft, and task in the initial catalog', () => {
-    expect(WORLDS).toHaveLength(1);
+  it('provides two selectable worlds plus the initial aircraft and task', () => {
+    expect(WORLDS).toHaveLength(2);
     expect(AIRCRAFT).toHaveLength(1);
     expect(TASKS).toHaveLength(1);
   });
@@ -20,6 +20,22 @@ describe('game catalog', () => {
     expect(selection.world.id).toBe(DEFAULT_GAME_SELECTION_IDS.worldId);
     expect(selection.aircraft.id).toBe(DEFAULT_GAME_SELECTION_IDS.aircraftId);
     expect(selection.task.id).toBe(DEFAULT_GAME_SELECTION_IDS.taskId);
+    expect(selection.worldSettings.heightExaggeration).toBe(1);
+  });
+
+  it('clamps Matsumoto terrain height exaggeration to the supported range', () => {
+    const selection = resolveGameSelection(
+      {
+        ...DEFAULT_GAME_SELECTION_IDS,
+        worldId: 'matsumoto-real'
+      },
+      {
+        heightExaggeration: 9
+      }
+    );
+
+    expect(selection.world.id).toBe('matsumoto-real');
+    expect(selection.worldSettings.heightExaggeration).toBe(3);
   });
 
   it('rejects an unknown runtime option', () => {

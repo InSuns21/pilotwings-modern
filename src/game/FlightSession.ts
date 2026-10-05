@@ -19,6 +19,7 @@ import {
 import type { GameSelection } from './GameCatalog';
 import type { TrainingMissionProgress } from './TrainingMission';
 import { createTaskRuntime } from './TaskRuntime';
+import { createWorldRuntime } from '../world/WorldRuntime';
 
 export interface FlightSession {
   dispose(): void;
@@ -41,6 +42,9 @@ export async function createFlightSession(
 
         <div class="session-loadout">
           <span>WORLD <b>${selection.world.name}</b></span>
+          ${selection.world.id === 'matsumoto-real'
+            ? `<span>RELIEF <b>${selection.worldSettings.heightExaggeration.toFixed(2)}×</b></span>`
+            : ''}
           <span>AIRCRAFT <b>${selection.aircraft.name}</b></span>
           <span>TASK <b>${selection.task.name}</b></span>
         </div>
@@ -81,6 +85,7 @@ export async function createFlightSession(
       </div>
 
       <div class="camera-note" aria-hidden="true">CAMERA: LEVEL CHASE · FORWARD ↑</div>
+      <div class="world-attribution" data-world-attribution hidden></div>
 
       <div class="game-over-panel" data-game-over hidden>
         <div class="game-over-card">
@@ -162,6 +167,7 @@ export async function createFlightSession(
   const messageElement = root.querySelector<HTMLElement>('[data-mission-message]');
   const gameOverPanel = root.querySelector<HTMLElement>('[data-game-over]');
   const crashMessageElement = root.querySelector<HTMLElement>('[data-crash-message]');
+  const attributionElement = root.querySelector<HTMLElement>('[data-world-attribution]');
 
   if (
     !viewport ||
@@ -181,16 +187,25 @@ export async function createFlightSession(
     !warningElement ||
     !messageElement ||
     !gameOverPanel ||
-    !crashMessageElement
+    !crashMessageElement ||
+    !attributionElement
   ) {
     throw new Error('Game shell did not initialize');
   }
 
   const keyboardInput = new KeyboardInput();
   const touchInput = new TouchInput(touchControls);
-  const physics = await PhysicsWorld.create();
-  const renderer = new SceneRenderer(viewport, selection);
+  const [physics, worldRuntime] = await Promise.all([
+    PhysicsWorld.create(),
+    createWorldRuntime(selection.world.id, selection.worldSettings)
+  ]);
+  const renderer = new SceneRenderer(viewport, selection, worldRuntime);
   const taskRuntime = createTaskRuntime(selection.task.id);
+
+  if (worldRuntime.attribution) {
+    attributionElement.textContent = worldRuntime.attribution;
+    attributionElement.hidden = false;
+  }
 
   let mission = taskRuntime.createProgress();
   let safety: FlightSafetyState = SAFE_FLIGHT;
@@ -283,7 +298,7 @@ export async function createFlightSession(
       const previousState = physics.getAircraftState();
       physics.step(combineFlightInputs(keyboardInput.sample(), touchInput.sample()));
       const state = physics.getAircraftState();
-      safety = evaluateFlightSafety(previousState, state);
+      safety = evaluateFlightSafety(previousState, state, worldRuntime);
 
       if (safety.crashReason) {
         gameOver = true;

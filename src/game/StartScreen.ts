@@ -1,6 +1,7 @@
 import {
   AIRCRAFT,
   DEFAULT_GAME_SELECTION_IDS,
+  DEFAULT_WORLD_SETTINGS,
   TASKS,
   WORLDS,
   resolveGameSelection,
@@ -45,6 +46,22 @@ export function mountStartScreen(
           ${selectorMarkup('TASK', 'task', TASKS, DEFAULT_GAME_SELECTION_IDS.taskId)}
         </div>
 
+        <div class="world-settings" data-world-settings hidden>
+          <label>
+            <span>HEIGHT EXAGGERATION</span>
+            <input
+              type="range"
+              min="1"
+              max="3"
+              step="0.25"
+              value="${DEFAULT_WORLD_SETTINGS.heightExaggeration}"
+              data-height-exaggeration
+            />
+          </label>
+          <output data-height-output>${DEFAULT_WORLD_SETTINGS.heightExaggeration.toFixed(2)}×</output>
+          <small>DEM地形の高さ倍率。滑走路位置は実座標・実寸のまま維持します。</small>
+        </div>
+
         <div class="start-summary" data-selection-summary></div>
 
         <div class="start-actions">
@@ -63,10 +80,13 @@ export function mountStartScreen(
   const worldPreviewHost = requireElement(root, '[data-preview-world]');
   const aircraftPreviewHost = requireElement(root, '[data-preview-aircraft]');
   const taskPreviewHost = requireElement(root, '[data-preview-task]');
+  const worldSettings = requireElement(root, '[data-world-settings]');
+  const heightInput = root.querySelector<HTMLInputElement>('[data-height-exaggeration]');
+  const heightOutput = root.querySelector<HTMLOutputElement>('[data-height-output]');
   const summary = root.querySelector<HTMLElement>('[data-selection-summary]');
   const startButton = root.querySelector<HTMLButtonElement>('[data-start-flight]');
 
-  if (!summary || !startButton) {
+  if (!summary || !startButton || !heightInput || !heightOutput) {
     throw new Error('Start screen did not initialize');
   }
 
@@ -75,11 +95,16 @@ export function mountStartScreen(
   let aircraftPreview: StartScreen3dPreview | null = null;
 
   const currentSelection = (): GameSelection =>
-    resolveGameSelection({
-      worldId: worldSelect.value as WorldId,
-      aircraftId: aircraftSelect.value as AircraftId,
-      taskId: taskSelect.value as TaskId
-    });
+    resolveGameSelection(
+      {
+        worldId: worldSelect.value as WorldId,
+        aircraftId: aircraftSelect.value as AircraftId,
+        taskId: taskSelect.value as TaskId
+      },
+      {
+        heightExaggeration: Number(heightInput.value)
+      }
+    );
 
   const updateCards = (): void => {
     const worldId = worldSelect.value as WorldId;
@@ -90,8 +115,14 @@ export function mountStartScreen(
     updateCardText(root, 'aircraft', AIRCRAFT, aircraftId);
     updateCardText(root, 'task', TASKS, taskId);
 
+    worldSettings.hidden = worldId !== 'matsumoto-real';
+
     worldPreview?.dispose();
-    worldPreview = mountWorldPreview(worldPreviewHost, worldId);
+    worldPreview = mountWorldPreview(
+      worldPreviewHost,
+      worldId,
+      Number(heightInput.value)
+    );
 
     aircraftPreview?.dispose();
     aircraftPreview = mountAircraftPreview(aircraftPreviewHost, aircraftId);
@@ -101,8 +132,12 @@ export function mountStartScreen(
 
   const updateSummary = (): void => {
     const selection = currentSelection();
+    const relief =
+      selection.world.id === 'matsumoto-real'
+        ? ` · 高さ ${selection.worldSettings.heightExaggeration.toFixed(2)}×`
+        : '';
     summary.innerHTML = `
-      <div><span>WORLD</span><strong>${selection.world.name}</strong></div>
+      <div><span>WORLD</span><strong>${selection.world.name}${relief}</strong></div>
       <div><span>AIRCRAFT</span><strong>${selection.aircraft.name}</strong></div>
       <div><span>TASK</span><strong>${selection.task.name}</strong></div>
     `;
@@ -113,9 +148,28 @@ export function mountStartScreen(
     updateSummary();
   };
 
+  const onHeightInput = (): void => {
+    heightOutput.value = `${Number(heightInput.value).toFixed(2)}×`;
+    updateSummary();
+  };
+
+  const onHeightChange = (): void => {
+    if (worldSelect.value !== 'matsumoto-real') {
+      return;
+    }
+    worldPreview?.dispose();
+    worldPreview = mountWorldPreview(
+      worldPreviewHost,
+      'matsumoto-real',
+      Number(heightInput.value)
+    );
+  };
+
   worldSelect.addEventListener('change', onChange);
   aircraftSelect.addEventListener('change', onChange);
   taskSelect.addEventListener('change', onChange);
+  heightInput.addEventListener('input', onHeightInput);
+  heightInput.addEventListener('change', onHeightChange);
 
   const onClick = async (): Promise<void> => {
     if (startButton.disabled || disposed) {
@@ -148,6 +202,8 @@ export function mountStartScreen(
       worldSelect.removeEventListener('change', onChange);
       aircraftSelect.removeEventListener('change', onChange);
       taskSelect.removeEventListener('change', onChange);
+      heightInput.removeEventListener('input', onHeightInput);
+      heightInput.removeEventListener('change', onHeightChange);
       startButton.removeEventListener('click', onClick);
     }
   };

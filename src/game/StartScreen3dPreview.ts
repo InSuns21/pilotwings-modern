@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { AircraftModel } from '../render/AircraftModel';
+import {
+  createMatsumotoWorldVisual,
+  type MatsumotoWorldVisual
+} from '../render/MatsumotoWorldVisual';
 import { createTrainingIslandVisual } from '../render/TrainingIslandVisual';
+import { createWorldRuntime } from '../world/WorldRuntime';
 import type { AircraftId, WorldId } from './GameCatalog';
 
 export interface StartScreen3dPreview {
@@ -9,11 +14,14 @@ export interface StartScreen3dPreview {
 
 export function mountWorldPreview(
   host: HTMLElement,
-  worldId: WorldId
+  worldId: WorldId,
+  heightExaggeration = 1.5
 ): StartScreen3dPreview {
   switch (worldId) {
     case 'training-island':
       return createTrainingIslandPreview(host);
+    case 'matsumoto-real':
+      return createMatsumotoPreview(host, heightExaggeration);
   }
 
   return assertNever(worldId);
@@ -67,6 +75,73 @@ function createTrainerPreview(host: HTMLElement): StartScreen3dPreview {
       disposeObject(aircraft.root);
       ground.geometry.dispose();
       disposeMaterial(ground.material);
+      preview.dispose();
+    }
+  };
+}
+
+function createMatsumotoPreview(
+  host: HTMLElement,
+  heightExaggeration: number
+): StartScreen3dPreview {
+  const preview = createPreviewScene(host, 34);
+  preview.scene.background = new THREE.Color(0xaecfe1);
+  preview.scene.fog = new THREE.Fog(0xaecfe1, 2600, 7200);
+  preview.camera.far = 8000;
+  preview.camera.position.set(-1750, 1650, 1950);
+  preview.camera.lookAt(new THREE.Vector3(0, 0, 0));
+  preview.camera.updateProjectionMatrix();
+
+  const loadingGround = new THREE.Mesh(
+    new THREE.PlaneGeometry(3600, 3600),
+    new THREE.MeshStandardMaterial({
+      color: 0x69765d,
+      roughness: 1
+    })
+  );
+  loadingGround.rotation.x = -Math.PI / 2;
+  loadingGround.position.y = -1;
+  preview.scene.add(loadingGround);
+
+  let disposed = false;
+  let world: MatsumotoWorldVisual | null = null;
+
+  const render = (): void => {
+    preview.renderer.render(preview.scene, preview.camera);
+  };
+  preview.setRender(render);
+  render();
+
+  void createWorldRuntime(
+    'matsumoto-real',
+    { heightExaggeration },
+    { tileRadius: 1 }
+  )
+    .then((runtime) => {
+      if (disposed || runtime.id !== 'matsumoto-real') {
+        return;
+      }
+
+      preview.scene.remove(loadingGround);
+      loadingGround.geometry.dispose();
+      disposeMaterial(loadingGround.material);
+      world = createMatsumotoWorldVisual(runtime);
+      preview.scene.add(world.root);
+      render();
+    })
+    .catch((error: unknown) => {
+      console.error('Failed to load Matsumoto preview terrain', error);
+    });
+
+  return {
+    dispose(): void {
+      disposed = true;
+      world?.dispose();
+      if (loadingGround.parent) {
+        loadingGround.removeFromParent();
+        loadingGround.geometry.dispose();
+        disposeMaterial(loadingGround.material);
+      }
       preview.dispose();
     }
   };

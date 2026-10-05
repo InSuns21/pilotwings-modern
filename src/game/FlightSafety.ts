@@ -32,17 +32,35 @@ export interface FlightSafetyState {
   readonly crashMessage: string | null;
 }
 
+export interface FlightSafetyWorld {
+  terrainHeightAt(x: number, z: number): number;
+  isOnRunway(x: number, z: number): boolean;
+  surfaceAt(x: number, z: number): 'ground' | 'water';
+}
+
 export const SAFE_FLIGHT: FlightSafetyState = {
   warning: null,
   crashReason: null,
   crashMessage: null
 };
 
+const TRAINING_ISLAND_SAFETY_WORLD: FlightSafetyWorld = {
+  terrainHeightAt,
+  isOnRunway,
+  surfaceAt(x: number, z: number): 'ground' | 'water' {
+    return isInsideTrainingIsland(x, z) ? 'ground' : 'water';
+  }
+};
+
 export function evaluateFlightSafety(
   previous: FlightState,
-  current: FlightState
+  current: FlightState,
+  world: FlightSafetyWorld = TRAINING_ISLAND_SAFETY_WORLD
 ): FlightSafetyState {
-  const terrainHeight = terrainHeightAt(current.position.x, current.position.z);
+  const terrainHeight = world.terrainHeightAt(
+    current.position.x,
+    current.position.z
+  );
 
   if (
     terrainHeight > 0 &&
@@ -53,8 +71,8 @@ export function evaluateFlightSafety(
 
   const touchedDown = !previous.onGround && current.onGround;
   if (touchedDown) {
-    if (!isOnRunway(current.position.x, current.position.z)) {
-      return isInsideTrainingIsland(current.position.x, current.position.z)
+    if (!world.isOnRunway(current.position.x, current.position.z)) {
+      return world.surfaceAt(current.position.x, current.position.z) === 'ground'
         ? crash('ground', 'GROUND IMPACT — 滑走路外に接地')
         : crash('water', 'WATER IMPACT — 海面に墜落');
     }
@@ -88,9 +106,9 @@ export function evaluateFlightSafety(
   if (
     !current.onGround &&
     current.position.y <= RUNWAY_GROUND_Y &&
-    !isOnRunway(current.position.x, current.position.z)
+    !world.isOnRunway(current.position.x, current.position.z)
   ) {
-    return isInsideTrainingIsland(current.position.x, current.position.z)
+    return world.surfaceAt(current.position.x, current.position.z) === 'ground'
       ? crash('ground', 'GROUND IMPACT — 地面に衝突')
       : crash('water', 'WATER IMPACT — 海面に墜落');
   }

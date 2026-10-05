@@ -1,4 +1,4 @@
-export type WorldId = 'training-island';
+export type WorldId = 'training-island' | 'matsumoto-real';
 export type AircraftId = 'trainer-01';
 export type TaskId = 'ring-training';
 
@@ -15,10 +15,15 @@ export interface GameSelectionIds {
   readonly taskId: TaskId;
 }
 
+export interface WorldSettings {
+  readonly heightExaggeration: number;
+}
+
 export interface GameSelection {
   readonly world: CatalogOption<WorldId>;
   readonly aircraft: CatalogOption<AircraftId>;
   readonly task: CatalogOption<TaskId>;
+  readonly worldSettings: WorldSettings;
 }
 
 export const WORLDS: readonly CatalogOption<WorldId>[] = [
@@ -27,6 +32,12 @@ export const WORLDS: readonly CatalogOption<WorldId>[] = [
     name: 'トレーニング・アイランド',
     subtitle: 'TRAINING ISLAND',
     description: '海岸線、丘陵、空港、集落、マリーナを備えた沿岸型の基本訓練ワールド。'
+  },
+  {
+    id: 'matsumoto-real',
+    name: '松本リアル・テレイン',
+    subtitle: 'MATSUMOTO / GSI',
+    description: '地理院の航空写真タイルとDEMで、実在の松本空港と周辺地形を再構成するリアル地形ワールド。'
   }
 ];
 
@@ -54,13 +65,25 @@ export const DEFAULT_GAME_SELECTION_IDS: GameSelectionIds = {
   taskId: 'ring-training'
 };
 
+export const DEFAULT_WORLD_SETTINGS: WorldSettings = {
+  heightExaggeration: 1.5
+};
+
 export function resolveGameSelection(
-  ids: GameSelectionIds = DEFAULT_GAME_SELECTION_IDS
+  ids: GameSelectionIds = DEFAULT_GAME_SELECTION_IDS,
+  worldSettings: WorldSettings = DEFAULT_WORLD_SETTINGS
 ): GameSelection {
+  const world = requireOption(WORLDS, ids.worldId, 'world');
   return {
-    world: requireOption(WORLDS, ids.worldId, 'world'),
+    world,
     aircraft: requireOption(AIRCRAFT, ids.aircraftId, 'aircraft'),
-    task: requireOption(TASKS, ids.taskId, 'task')
+    task: requireOption(TASKS, ids.taskId, 'task'),
+    worldSettings: {
+      heightExaggeration:
+        world.id === 'matsumoto-real'
+          ? Math.max(1, Math.min(3, worldSettings.heightExaggeration))
+          : 1
+    }
   };
 }
 
