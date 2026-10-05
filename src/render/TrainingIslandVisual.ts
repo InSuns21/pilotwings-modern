@@ -149,9 +149,15 @@ function createIslandSurface(
     z: TRAINING_ISLAND_CENTER.z + (point.z - TRAINING_ISLAND_CENTER.z) * scale
   }));
 
-  shape.moveTo(scaled[0].x, -scaled[0].z);
+  const first = scaled[0];
+  if (!first) {
+    throw new Error('Training island outline must contain at least one point');
+  }
+
+  shape.moveTo(first.x, -first.z);
   for (let index = 1; index < scaled.length; index += 1) {
-    shape.lineTo(scaled[index].x, -scaled[index].z);
+    const point = scaled[index]!;
+    shape.lineTo(point.x, -point.z);
   }
   shape.closePath();
 
@@ -316,8 +322,9 @@ function addTown(root: THREE.Group): void {
       const width = 15 + (index % 3) * 3;
       const depth = 13 + ((index + 1) % 3) * 3;
       const height = 8 + (index % 4) * 2.4;
+      const wallColor = wallColors[index % wallColors.length] ?? wallColors[0];
       const wallMaterial = new THREE.MeshStandardMaterial({
-        color: wallColors[index % wallColors.length],
+        color: wallColor,
         roughness: 0.94
       });
 
@@ -401,8 +408,8 @@ function addRoad(
   });
 
   for (let index = 1; index < points.length; index += 1) {
-    const start = points[index - 1];
-    const end = points[index];
+    const start = points[index - 1]!;
+    const end = points[index]!;
     const dx = end.x - start.x;
     const dz = end.z - start.z;
     const length = Math.hypot(dx, dz);
