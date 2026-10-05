@@ -28,8 +28,8 @@ export interface FlightState {
 export const RUNWAY_GROUND_Y = 0.85;
 export const TAKEOFF_SPEED = 18;
 export const LEVEL_FLIGHT_MAX_SPEED = 52;
-export const OVERSPEED_WARNING_SPEED = 64;
-export const MAX_DIVE_SPEED = 70;
+export const OVERSPEED_WARNING_SPEED = 250 / 3.6;
+export const MAX_DIVE_SPEED = 280 / 3.6;
 export const STALL_SPEED = 16;
 export const STALL_RECOVERY_SPEED = 18;
 export const GLIDE_TRIM_SPEED = 22;
