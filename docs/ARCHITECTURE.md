@@ -6,11 +6,11 @@ A browser-first 3D flying game inspired by the approachable mission-flight genre
 
 ## Stack
 
-- TypeScript: application, flight model, and mission code.
+- TypeScript: application, flight model, safety rules, and mission code.
 - Vite: local development and static production builds.
-- Three.js: rendering, camera, scene graph, procedural ground texture, airport, and mission visuals.
-- Rapier 3D (WASM): kinematic aircraft body/collider integration and future world collision expansion.
-- Vitest: deterministic tests for timing, controls, flight behavior, and mission progression.
+- Three.js: rendering, camera, scene graph, procedural ground texture, airport, terrain, and crash visuals.
+- Rapier 3D (WASM): kinematic aircraft body/collider integration.
+- Vitest: deterministic tests for timing, controls, flight behavior, safety judgments, and mission progression.
 - GitHub Actions + GitHub Pages: CI and static deployment.
 
 ## Runtime boundaries
@@ -19,51 +19,56 @@ A browser-first 3D flying game inspired by the approachable mission-flight genre
 : Framework-independent timing and reusable engine primitives.
 
 `src/flight/`
-: Deterministic arcade flight state and control law. This is the source of truth for speed, heading, pitch, roll, altitude, takeoff, and touchdown behavior.
+: Deterministic arcade flight state and control law. This is the source of truth for speed, heading, pitch, roll, vertical speed, stall state, takeoff, and touchdown behavior.
 
 `src/input/`
-: Converts keyboard, touch, and future gamepad devices into normalized pilot commands. Device-specific code must not leak into flight or mission logic.
+: Converts keyboard, touch, and future gamepad devices into normalized pilot commands.
 
 `src/physics/`
-: Bridges deterministic flight state into Rapier kinematic bodies/colliders. It must not reintroduce raw torque-driven control.
+: Bridges authoritative flight state into Rapier kinematic bodies/colliders.
+
+`src/world/`
+: Shared world geometry used by both rendering and collision/safety judgments. Terrain visuals and terrain collision must use the same source data.
 
 `src/render/`
-: Owns Three.js scene graph, level chase camera, airport/ground visuals, aircraft mesh, and mission visualization.
+: Owns Three.js scene graph, level chase camera, airport/ground visuals, aircraft mesh, mission visualization, and crash effects.
 
 `src/game/`
-: Owns mission progression and application orchestration.
+: Owns mission progression, safety judgments, crash causes, and application orchestration.
 
-## Control rules
+## Flight and safety rules
 
-- All devices produce the same normalized `FlightInput`.
-- Positive pitch means nose up, positive roll means right bank, positive yaw means turn right.
-- Keyboard and touch inputs may be combined; axes are clamped to `[-1, 1]`.
-- Pitch and roll are target-attitude commands with bounded response rates.
-- Releasing the stick returns pitch/roll toward level flight.
-- Yaw commands a bounded heading rate; it is not converted into raw rigid-body torque.
-- Bank contributes to coordinated turn rate so normal turns can be flown mostly with roll.
-- Touch uses Pointer Events for multi-touch and pointer capture.
+- Pitch and roll are bounded target attitudes and return toward level when input is released.
+- Yaw commands a bounded heading rate and does not use raw rigid-body torque.
+- Low airspeed or excessive pitch can enter a recoverable stall.
+- Stall reduces control authority, increases sink, and drives the nose down.
+- Excessive nose-up attitude is surfaced as a warning before or during the stall envelope.
+- Terrain collision is fatal.
+- Airborne ground contact outside the runway is fatal.
+- Touchdown is fatal when speed, pitch/roll attitude, or descent rate exceeds configured safe limits.
+- A crash freezes simulation, marks the mission failed, reports the reason, and triggers a visual wreck/explosion effect.
+- Safety rules are deterministic and unit-tested.
 
 ## Camera rules
 
 - The default camera is a level chase camera.
 - Camera position follows aircraft heading, but does not inherit aircraft roll/pitch.
-- World up remains vertical to keep the horizon readable.
-- The HUD exposes speed, altitude, heading, ring progress, and current mission phase.
+- World up remains vertical.
+- The HUD exposes speed, altitude, heading, pitch, vertical speed, ring progress, warnings, and mission phase.
 - A center reticle provides a stable forward reference.
 
 ## World and mission rules
 
-- Ground uses a procedural repeated tile pattern so altitude and motion are visually readable without external image assets.
+- Ground uses a procedural repeated tile pattern.
 - The airport includes a runway, centerline/threshold markings, start pad, and visible landing zone.
-- The initial training mission is: take off -> pass three rings in order -> land in the marked runway zone.
-- Mission progression is deterministic and unit-tested.
+- Mountains are driven by shared `src/world` geometry so rendered terrain and collision judgment cannot drift apart.
+- The initial training mission is: take off -> pass three rings in order -> make a safe landing in the marked zone.
 
 ## Simulation rules
 
 - Simulation runs at a fixed 60 Hz step.
 - Render cadence is independent from simulation cadence.
-- Long browser stalls are clamped to prevent a spiral of death.
+- Long browser stalls are clamped.
 - The arcade flight state is authoritative for aircraft transforms.
 - Rapier mirrors the flight state through a kinematic body.
 - Visual meshes and collision meshes remain separate concepts.
@@ -71,9 +76,9 @@ A browser-first 3D flying game inspired by the approachable mission-flight genre
 ## Future seams
 
 1. richer aerodynamic model while preserving controllability;
-2. runway/terrain collision and crash states;
-3. additional missions and scoring;
-4. gamepad support and touch-control refinement;
-5. GLTF aircraft/scenery assets;
-6. audio;
-7. save/settings persistence.
+2. more detailed collision geometry and crash states;
+3. landing/crash scoring;
+4. additional missions;
+5. gamepad support and touch-control refinement;
+6. GLTF aircraft/scenery assets;
+7. audio and persistence.
