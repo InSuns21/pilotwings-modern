@@ -38,6 +38,7 @@ export class TouchInput {
   readonly #stick: HTMLElement;
   readonly #knob: HTMLElement;
   readonly #thrust: HTMLElement;
+  readonly #brake: HTMLElement;
   readonly #yawLeft: HTMLElement;
   readonly #yawRight: HTMLElement;
   readonly #cleanup: Array<() => void> = [];
@@ -45,6 +46,7 @@ export class TouchInput {
   #stickPointerId: number | null = null;
   #stickVector: StickVector = { x: 0, y: 0 };
   readonly #thrustPointers = new Set<number>();
+  readonly #brakePointers = new Set<number>();
   readonly #yawLeftPointers = new Set<number>();
   readonly #yawRightPointers = new Set<number>();
 
@@ -52,6 +54,7 @@ export class TouchInput {
     this.#stick = this.#require('[data-touch-stick]');
     this.#knob = this.#require('[data-touch-knob]');
     this.#thrust = this.#require('[data-touch-thrust]');
+    this.#brake = this.#require('[data-touch-brake]');
     this.#yawLeft = this.#require('[data-touch-yaw-left]');
     this.#yawRight = this.#require('[data-touch-yaw-right]');
 
@@ -62,6 +65,7 @@ export class TouchInput {
     this.#listen(this.#stick, 'lostpointercapture', this.#onStickPointerEnd);
 
     this.#bindHoldButton(this.#thrust, this.#thrustPointers);
+    this.#bindHoldButton(this.#brake, this.#brakePointers);
     this.#bindHoldButton(this.#yawLeft, this.#yawLeftPointers);
     this.#bindHoldButton(this.#yawRight, this.#yawRightPointers);
   }
@@ -73,7 +77,8 @@ export class TouchInput {
       yaw:
         (this.#yawRightPointers.size > 0 ? 1 : 0) -
         (this.#yawLeftPointers.size > 0 ? 1 : 0),
-      throttle: this.#thrustPointers.size > 0 ? 1 : 0
+      throttle: this.#thrustPointers.size > 0 ? 1 : 0,
+      brake: this.#brakePointers.size > 0 ? 1 : 0
     };
   }
 
@@ -83,6 +88,7 @@ export class TouchInput {
     }
     this.#resetStick();
     this.#thrustPointers.clear();
+    this.#brakePointers.clear();
     this.#yawLeftPointers.clear();
     this.#yawRightPointers.clear();
   }
