@@ -2,59 +2,78 @@
 
 ## Goal
 
-A browser-first 3D flying game inspired by the feel of Pilotwings, implemented as an original project rather than a ROM/emulator or asset clone.
+A browser-first 3D flying game inspired by the approachable mission-flight genre, implemented as an original project rather than a ROM/emulator or asset clone.
 
 ## Stack
 
-- TypeScript: application and simulation code.
+- TypeScript: application, flight model, and mission code.
 - Vite: local development and static production builds.
-- Three.js: rendering, camera, scene graph, lighting, and future GLTF assets.
-- Rapier 3D (WASM): rigid-body collision and contact simulation.
-- Vitest: deterministic unit tests for simulation-side logic.
+- Three.js: rendering, camera, scene graph, procedural ground texture, airport, and mission visuals.
+- Rapier 3D (WASM): kinematic aircraft body/collider integration and future world collision expansion.
+- Vitest: deterministic tests for timing, controls, flight behavior, and mission progression.
 - GitHub Actions + GitHub Pages: CI and static deployment.
 
 ## Runtime boundaries
 
 `src/core/`
-: Framework-independent timing and math. Must stay unit-testable without DOM/WebGL.
+: Framework-independent timing and reusable engine primitives.
+
+`src/flight/`
+: Deterministic arcade flight state and control law. This is the source of truth for speed, heading, pitch, roll, altitude, takeoff, and touchdown behavior.
 
 `src/input/`
-: Converts keyboard, touch, and future gamepad devices into normalized pilot commands. Device-specific code must not leak into game or physics logic.
+: Converts keyboard, touch, and future gamepad devices into normalized pilot commands. Device-specific code must not leak into flight or mission logic.
 
 `src/physics/`
-: Owns Rapier and collision bodies. Rendering code must not mutate physics bodies directly.
+: Bridges deterministic flight state into Rapier kinematic bodies/colliders. It must not reintroduce raw torque-driven control.
 
 `src/render/`
-: Owns Three.js objects and visual synchronization. No mission rules live here.
+: Owns Three.js scene graph, level chase camera, airport/ground visuals, aircraft mesh, and mission visualization.
 
 `src/game/`
-: Application composition, mission/game-state orchestration, and the render/simulation loop.
+: Owns mission progression and application orchestration.
 
-## Input rules
+## Control rules
 
 - All devices produce the same normalized `FlightInput`.
+- Positive pitch means nose up, positive roll means right bank, positive yaw means turn right.
 - Keyboard and touch inputs may be combined; axes are clamped to `[-1, 1]`.
-- Touch uses Pointer Events so multi-touch, pen, and pointer capture share one implementation.
-- The touch layout must respect safe-area insets and remain usable in tablet portrait and landscape orientations.
-- Touch surfaces disable browser scrolling/zoom gestures only inside the full-screen game experience.
+- Pitch and roll are target-attitude commands with bounded response rates.
+- Releasing the stick returns pitch/roll toward level flight.
+- Yaw commands a bounded heading rate; it is not converted into raw rigid-body torque.
+- Bank contributes to coordinated turn rate so normal turns can be flown mostly with roll.
+- Touch uses Pointer Events for multi-touch and pointer capture.
+
+## Camera rules
+
+- The default camera is a level chase camera.
+- Camera position follows aircraft heading, but does not inherit aircraft roll/pitch.
+- World up remains vertical to keep the horizon readable.
+- The HUD exposes speed, altitude, heading, ring progress, and current mission phase.
+- A center reticle provides a stable forward reference.
+
+## World and mission rules
+
+- Ground uses a procedural repeated tile pattern so altitude and motion are visually readable without external image assets.
+- The airport includes a runway, centerline/threshold markings, start pad, and visible landing zone.
+- The initial training mission is: take off -> pass three rings in order -> land in the marked runway zone.
+- Mission progression is deterministic and unit-tested.
 
 ## Simulation rules
 
-- Physics runs at a fixed 60 Hz step.
-- Render cadence is independent from physics cadence.
+- Simulation runs at a fixed 60 Hz step.
+- Render cadence is independent from simulation cadence.
 - Long browser stalls are clamped to prevent a spiral of death.
-- Physics bodies are authoritative for world transforms; rendering follows them.
-- Visual meshes and collision meshes are separate concepts.
-- New flight/aerodynamic equations belong in pure functions or dedicated simulation modules before being wired into Rapier.
+- The arcade flight state is authoritative for aircraft transforms.
+- Rapier mirrors the flight state through a kinematic body.
+- Visual meshes and collision meshes remain separate concepts.
 
 ## Future seams
 
-The initial scaffold intentionally leaves these as replaceable modules:
-
-1. aerodynamic force model;
-2. mission/checkpoint system;
-3. terrain and scenery streaming;
-4. gamepad input and touch-control polish;
-5. GLTF aircraft assets and animation;
+1. richer aerodynamic model while preserving controllability;
+2. runway/terrain collision and crash states;
+3. additional missions and scoring;
+4. gamepad support and touch-control refinement;
+5. GLTF aircraft/scenery assets;
 6. audio;
 7. save/settings persistence.
