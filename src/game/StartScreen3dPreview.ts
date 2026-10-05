@@ -75,12 +75,12 @@ function createTrainerPreview(host: HTMLElement): StartScreen3dPreview {
 function createTrainingIslandPreview(host: HTMLElement): StartScreen3dPreview {
   const preview = createPreviewScene(host, 34);
   preview.scene.background = new THREE.Color(0xb8e1fb);
-  preview.scene.fog = new THREE.Fog(0xb8e1fb, 620, 1450);
+  preview.scene.fog = new THREE.Fog(0xb8e1fb, 850, 1700);
 
   const world = createTrainingIslandVisual();
   preview.scene.add(world.root);
 
-  preview.camera.position.set(210, 410, 490);
+  preview.camera.position.set(180, 600, 720);
   preview.camera.lookAt(new THREE.Vector3(110, 0, 0));
 
   const render = (): void => {
