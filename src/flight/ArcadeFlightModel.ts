@@ -17,6 +17,7 @@ export interface FlightState {
   readonly position: Vector3State;
   readonly heading: number;
   readonly pitch: number;
+  readonly flightPathAngle: number;
   readonly roll: number;
   readonly speed: number;
   readonly verticalSpeed: number;
@@ -29,7 +30,6 @@ export const TAKEOFF_SPEED = 18;
 export const MAX_SPEED = 52;
 export const STALL_SPEED = 16;
 export const STALL_RECOVERY_SPEED = 18;
-export const STALL_PITCH = 22 * (Math.PI / 180);
 export const GLIDE_TRIM_SPEED = 22;
 
 const DEG = Math.PI / 180;
@@ -39,21 +39,30 @@ const MAX_ROLL = 38 * DEG;
 const AIR_PITCH_RATE = 48 * DEG;
 const STALL_PITCH_DOWN_RATE = 68 * DEG;
 const AIR_ROLL_RATE = 78 * DEG;
+const FLIGHT_PATH_RESPONSE_RATE = 9 * DEG;
+const STALL_PATH_RESPONSE_RATE = 40 * DEG;
+const STALL_PATH_ANGLE = -28 * DEG;
+const MAX_FLIGHT_PATH_ANGLE = 32 * DEG;
+const MIN_FLIGHT_PATH_ANGLE = -36 * DEG;
 const GROUND_YAW_RATE = 24 * DEG;
 const DIRECT_YAW_RATE = 28 * DEG;
 const BANK_TURN_RATE = 52 * DEG;
-const STALL_RECOVERY_PITCH = 12 * DEG;
-const HIGH_PITCH_STALL_MAX_SPEED = 30;
-const GLIDE_TRIM_PITCH = -4 * DEG;
+const STALL_ANGLE_OF_ATTACK = 18 * DEG;
+const STALL_RECOVERY_ANGLE_OF_ATTACK = 10 * DEG;
+const HIGH_AOA_STALL_MAX_SPEED = 30;
+const GLIDE_TRIM_ANGLE_OF_ATTACK = 4 * DEG;
+const MIN_REQUIRED_ANGLE_OF_ATTACK = 2 * DEG;
+const MAX_REQUIRED_ANGLE_OF_ATTACK = 12 * DEG;
+const POWER_FLIGHT_PATH_BIAS = 4 * DEG;
 const PITCH_INPUT_DEAD_ZONE = 0.05;
 const THRUST_ACCELERATION = 11;
 const AIRBRAKE_DECELERATION = 8.5;
 const GROUND_BRAKE_DECELERATION = 18;
 const GROUND_COAST_DECELERATION = 5.5;
 const STALL_EXTRA_DRAG = 1.2;
-const STALL_EXTRA_SINK = 6;
+const ANGLE_OF_ATTACK_DRAG = 2.6;
 const PARASITE_DRAG_COEFFICIENT =
-  (GRAVITY * Math.sin(Math.abs(GLIDE_TRIM_PITCH))) /
+  (GRAVITY * Math.sin(GLIDE_TRIM_ANGLE_OF_ATTACK)) /
   (GLIDE_TRIM_SPEED * GLIDE_TRIM_SPEED);
 
 export function createInitialFlightState(): FlightState {
@@ -61,6 +70,7 @@ export function createInitialFlightState(): FlightState {
     position: { x: -175, y: RUNWAY_GROUND_Y, z: 0 },
     heading: 0,
     pitch: 0,
+    flightPathAngle: 0,
     roll: 0,
     speed: 0,
     verticalSpeed: 0,
@@ -81,72 +91,28 @@ export function stepArcadeFlight(
   const rollInput = clamp(input.roll, -1, 1);
   const yawInput = clamp(input.yaw, -1, 1);
 
-  const pitchTarget = state.onGround
-    ? pitchInput * MAX_PITCH
-    : Math.abs(pitchInput) > PITCH_INPUT_DEAD_ZONE
+  const pitchTarget =
+    Math.abs(pitchInput) > PITCH_INPUT_DEAD_ZONE
       ? pitchInput * MAX_PITCH
-      : throttle > 0.001
-        ? 0
-        : GLIDE_TRIM_PITCH;
+      : 0;
   const rollTarget = state.onGround ? 0 : rollInput * MAX_ROLL;
 
   let pitch = moveTowards(state.pitch, pitchTarget, AIR_PITCH_RATE * dt);
   let roll = moveTowards(state.roll, rollTarget, AIR_ROLL_RATE * dt);
 
-  const enteringStall =
-    !state.onGround &&
-    (state.speed < STALL_SPEED ||
-      (pitch > STALL_PITCH && state.speed < HIGH_PITCH_STALL_MAX_SPEED));
-  const wasStalled = state.stalled;
-  let stalled = !state.onGround && (wasStalled || enteringStall);
-
-  if (stalled) {
-    pitch = moveTowards(pitch, -11 * DEG, STALL_PITCH_DOWN_RATE * dt);
-    roll = moveTowards(roll, 0, AIR_ROLL_RATE * 0.7 * dt);
-  }
-
-  let acceleration: number;
   if (state.onGround) {
     const driveAcceleration =
-      throttle > 0.001 ? throttle * THRUST_ACCELERATION : -GROUND_COAST_DECELERATION;
-    acceleration = driveAcceleration - brake * GROUND_BRAKE_DECELERATION;
-  } else {
-    const gravityAlongFlightPath = -GRAVITY * Math.sin(pitch);
-    const parasiteDrag = PARASITE_DRAG_COEFFICIENT * state.speed * state.speed;
-    const stallDrag = stalled ? STALL_EXTRA_DRAG : 0;
-
-    acceleration =
-      throttle * THRUST_ACCELERATION +
-      gravityAlongFlightPath -
-      parasiteDrag -
-      brake * AIRBRAKE_DECELERATION -
-      stallDrag;
-  }
-
-  const speed = clamp(state.speed + acceleration * dt, 0, MAX_SPEED);
-
-  if (
-    wasStalled &&
-    speed >= STALL_RECOVERY_SPEED &&
-    pitch <= STALL_RECOVERY_PITCH
-  ) {
-    stalled = false;
-  }
-
-  const speedFactor = clamp(speed / 32, 0.25, 1.15);
-  const controlFactor = stalled ? 0.28 : 1;
-  const headingRate = state.onGround
-    ? yawInput * GROUND_YAW_RATE
-    : (yawInput * DIRECT_YAW_RATE +
-        Math.sin(roll) * BANK_TURN_RATE * speedFactor) *
-      controlFactor;
-  const heading = wrapAngle(state.heading + headingRate * dt);
-
-  const horizontalSpeed = speed * Math.cos(pitch);
-  const dx = Math.cos(heading) * horizontalSpeed * dt;
-  const dz = Math.sin(heading) * horizontalSpeed * dt;
-
-  if (state.onGround) {
+      throttle > 0.001
+        ? throttle * THRUST_ACCELERATION
+        : -GROUND_COAST_DECELERATION;
+    const acceleration =
+      driveAcceleration - brake * GROUND_BRAKE_DECELERATION;
+    const speed = clamp(state.speed + acceleration * dt, 0, MAX_SPEED);
+    const heading =
+      wrapAngle(state.heading + yawInput * GROUND_YAW_RATE * dt);
+    const horizontalSpeed = speed;
+    const dx = Math.cos(heading) * horizontalSpeed * dt;
+    const dz = Math.sin(heading) * horizontalSpeed * dt;
     const canLiftOff =
       brake < 0.2 &&
       speed >= TAKEOFF_SPEED &&
@@ -162,6 +128,7 @@ export function stepArcadeFlight(
         },
         heading,
         pitch,
+        flightPathAngle: 0,
         roll: 0,
         speed,
         verticalSpeed: 0,
@@ -170,25 +137,94 @@ export function stepArcadeFlight(
       };
     }
 
+    const flightPathAngle = clamp(
+      Math.max(3 * DEG, pitch - requiredAngleOfAttack(speed)),
+      3 * DEG,
+      7 * DEG
+    );
+    const verticalSpeed = speed * Math.sin(flightPathAngle);
+
     return {
       position: {
         x: state.position.x + dx,
-        y: RUNWAY_GROUND_Y + 0.08,
+        y: RUNWAY_GROUND_Y + Math.max(0.08, verticalSpeed * dt),
         z: state.position.z + dz
       },
       heading,
       pitch,
+      flightPathAngle,
       roll,
       speed,
-      verticalSpeed: Math.max(1.5, speed * Math.sin(pitch)),
+      verticalSpeed,
       onGround: false,
       stalled: false
     };
   }
 
-  const lowSpeedSink = Math.max(0, STALL_SPEED - speed) * 0.9;
-  const stallSink = stalled ? STALL_EXTRA_SINK : 0;
-  const verticalSpeed = speed * Math.sin(pitch) - lowSpeedSink - stallSink;
+  let angleOfAttack = pitch - state.flightPathAngle;
+  const enteringStall =
+    state.speed < STALL_SPEED ||
+    (angleOfAttack > STALL_ANGLE_OF_ATTACK &&
+      state.speed < HIGH_AOA_STALL_MAX_SPEED);
+  const wasStalled = state.stalled;
+  let stalled = wasStalled || enteringStall;
+
+  if (stalled) {
+    pitch = moveTowards(pitch, -11 * DEG, STALL_PITCH_DOWN_RATE * dt);
+    roll = moveTowards(roll, 0, AIR_ROLL_RATE * 0.7 * dt);
+    angleOfAttack = pitch - state.flightPathAngle;
+  }
+
+  const requiredAoA = requiredAngleOfAttack(Math.max(state.speed, 1));
+  const normalPathTarget = clamp(
+    pitch - requiredAoA + throttle * POWER_FLIGHT_PATH_BIAS,
+    MIN_FLIGHT_PATH_ANGLE,
+    MAX_FLIGHT_PATH_ANGLE
+  );
+  const pathResponseRate =
+    FLIGHT_PATH_RESPONSE_RATE * clamp(state.speed / GLIDE_TRIM_SPEED, 0.55, 1.35);
+  const flightPathAngle = moveTowards(
+    state.flightPathAngle,
+    stalled ? Math.min(normalPathTarget, STALL_PATH_ANGLE) : normalPathTarget,
+    (stalled ? STALL_PATH_RESPONSE_RATE : pathResponseRate) * dt
+  );
+
+  angleOfAttack = pitch - flightPathAngle;
+
+  const gravityAlongFlightPath = -GRAVITY * Math.sin(flightPathAngle);
+  const parasiteDrag = PARASITE_DRAG_COEFFICIENT * state.speed * state.speed;
+  const inducedDrag =
+    ANGLE_OF_ATTACK_DRAG * angleOfAttack * angleOfAttack;
+  const stallDrag = stalled ? STALL_EXTRA_DRAG : 0;
+  const acceleration =
+    throttle * THRUST_ACCELERATION +
+    gravityAlongFlightPath -
+    parasiteDrag -
+    inducedDrag -
+    brake * AIRBRAKE_DECELERATION -
+    stallDrag;
+  const speed = clamp(state.speed + acceleration * dt, 0, MAX_SPEED);
+
+  if (
+    wasStalled &&
+    speed >= STALL_RECOVERY_SPEED &&
+    angleOfAttack <= STALL_RECOVERY_ANGLE_OF_ATTACK
+  ) {
+    stalled = false;
+  }
+
+  const speedFactor = clamp(speed / 32, 0.25, 1.15);
+  const controlFactor = stalled ? 0.28 : 1;
+  const headingRate =
+    (yawInput * DIRECT_YAW_RATE +
+      Math.sin(roll) * BANK_TURN_RATE * speedFactor) *
+    controlFactor;
+  const heading = wrapAngle(state.heading + headingRate * dt);
+
+  const horizontalSpeed = speed * Math.cos(flightPathAngle);
+  const verticalSpeed = speed * Math.sin(flightPathAngle);
+  const dx = Math.cos(heading) * horizontalSpeed * dt;
+  const dz = Math.sin(heading) * horizontalSpeed * dt;
   const nextY = state.position.y + verticalSpeed * dt;
 
   if (nextY <= RUNWAY_GROUND_Y) {
@@ -200,6 +236,7 @@ export function stepArcadeFlight(
       },
       heading,
       pitch,
+      flightPathAngle: 0,
       roll,
       speed,
       verticalSpeed: 0,
@@ -216,6 +253,7 @@ export function stepArcadeFlight(
     },
     heading,
     pitch,
+    flightPathAngle,
     roll,
     speed,
     verticalSpeed,
@@ -237,6 +275,23 @@ export function headingDegrees(state: FlightState): number {
 
 export function pitchDegrees(state: FlightState): number {
   return state.pitch / DEG;
+}
+
+export function flightPathDegrees(state: FlightState): number {
+  return state.flightPathAngle / DEG;
+}
+
+export function angleOfAttackDegrees(state: FlightState): number {
+  return (state.pitch - state.flightPathAngle) / DEG;
+}
+
+function requiredAngleOfAttack(speed: number): number {
+  const ratio = GLIDE_TRIM_SPEED / Math.max(speed, 1);
+  return clamp(
+    GLIDE_TRIM_ANGLE_OF_ATTACK * ratio * ratio,
+    MIN_REQUIRED_ANGLE_OF_ATTACK,
+    MAX_REQUIRED_ANGLE_OF_ATTACK
+  );
 }
 
 function clamp(value: number, min: number, max: number): number {
