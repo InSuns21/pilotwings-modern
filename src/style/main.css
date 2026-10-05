@@ -197,9 +197,13 @@ button {
   transform: translateY(1px);
 }
 
-.touch-thrust {
-  grid-column: 1 / -1;
-  font-size: 16px;
+.touch-thrust,
+.touch-brake {
+  font-size: 15px;
+}
+
+.touch-brake {
+  border-color: rgb(255 211 79 / 34%);
 }
 
 .fatal-error {
