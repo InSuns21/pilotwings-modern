@@ -1,4 +1,6 @@
 import {
+  MAX_DIVE_SPEED,
+  OVERSPEED_WARNING_SPEED,
   RUNWAY_GROUND_Y,
   type FlightState
 } from '../flight/ArcadeFlightModel';
@@ -22,6 +24,7 @@ export type CrashReason =
   | 'terrain'
   | 'ground'
   | 'water'
+  | 'overspeed'
   | 'landing-speed'
   | 'landing-attitude'
   | 'hard-landing';
@@ -61,6 +64,13 @@ export function evaluateFlightSafety(
     current.position.x,
     current.position.z
   );
+
+  if (!current.onGround && current.speed >= MAX_DIVE_SPEED) {
+    return crash(
+      'overspeed',
+      `OVERSPEED — 機体限界 ${Math.round(MAX_DIVE_SPEED * 3.6)} km/h を超過`
+    );
+  }
 
   if (
     terrainHeight > 0 &&
@@ -111,6 +121,14 @@ export function evaluateFlightSafety(
     return world.surfaceAt(current.position.x, current.position.z) === 'ground'
       ? crash('ground', 'GROUND IMPACT — 地面に衝突')
       : crash('water', 'WATER IMPACT — 海面に墜落');
+  }
+
+  if (!current.onGround && current.speed >= OVERSPEED_WARNING_SPEED) {
+    return {
+      warning: `OVERSPEED — ${Math.round(current.speed * 3.6)} km/h / 機首を上げて減速`,
+      crashReason: null,
+      crashMessage: null
+    };
   }
 
   if (current.stalled) {

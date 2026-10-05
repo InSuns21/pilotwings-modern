@@ -27,7 +27,9 @@ export interface FlightState {
 
 export const RUNWAY_GROUND_Y = 0.85;
 export const TAKEOFF_SPEED = 18;
-export const MAX_SPEED = 52;
+export const LEVEL_FLIGHT_MAX_SPEED = 52;
+export const OVERSPEED_WARNING_SPEED = 250 / 3.6;
+export const MAX_DIVE_SPEED = 280 / 3.6;
 export const STALL_SPEED = 16;
 export const STALL_RECOVERY_SPEED = 18;
 export const GLIDE_TRIM_SPEED = 22;
@@ -56,14 +58,23 @@ const MAX_REQUIRED_ANGLE_OF_ATTACK = 12 * DEG;
 const POWER_FLIGHT_PATH_BIAS = 4 * DEG;
 const PITCH_INPUT_DEAD_ZONE = 0.05;
 const THRUST_ACCELERATION = 11;
+const MAX_SIMULATION_SPEED = MAX_DIVE_SPEED + 8;
 const AIRBRAKE_DECELERATION = 8.5;
 const GROUND_BRAKE_DECELERATION = 18;
 const GROUND_COAST_DECELERATION = 5.5;
 const STALL_EXTRA_DRAG = 1.2;
 const ANGLE_OF_ATTACK_DRAG = 2.6;
+const DIVE_ENERGY_GAIN = 1;
 const PARASITE_DRAG_COEFFICIENT =
   (GRAVITY * Math.sin(GLIDE_TRIM_ANGLE_OF_ATTACK)) /
   (GLIDE_TRIM_SPEED * GLIDE_TRIM_SPEED);
+const THRUST_ZERO_SPEED =
+  LEVEL_FLIGHT_MAX_SPEED /
+  (1 -
+    (PARASITE_DRAG_COEFFICIENT *
+      LEVEL_FLIGHT_MAX_SPEED *
+      LEVEL_FLIGHT_MAX_SPEED) /
+      THRUST_ACCELERATION);
 
 export function createInitialFlightState(): FlightState {
   return {
@@ -107,7 +118,11 @@ export function stepArcadeFlight(
         : -GROUND_COAST_DECELERATION;
     const acceleration =
       driveAcceleration - brake * GROUND_BRAKE_DECELERATION;
-    const speed = clamp(state.speed + acceleration * dt, 0, MAX_SPEED);
+    const speed = clamp(
+      state.speed + acceleration * dt,
+      0,
+      LEVEL_FLIGHT_MAX_SPEED
+    );
     const heading =
       wrapAngle(state.heading + yawInput * GROUND_YAW_RATE * dt);
     const horizontalSpeed = speed;
@@ -192,18 +207,35 @@ export function stepArcadeFlight(
   angleOfAttack = pitch - flightPathAngle;
 
   const gravityAlongFlightPath = -GRAVITY * Math.sin(flightPathAngle);
+  const glideGravityAcceleration = GRAVITY * Math.sin(GLIDE_TRIM_ANGLE_OF_ATTACK);
+  // Preserve the neutral glide trim, but make intentional non-stalled descents
+  // return altitude to airspeed strongly enough to be legible in arcade play.
+  const diveEnergyRecovery =
+    !stalled && flightPathAngle < -GLIDE_TRIM_ANGLE_OF_ATTACK
+      ? DIVE_ENERGY_GAIN *
+        Math.max(0, gravityAlongFlightPath - glideGravityAcceleration)
+      : 0;
+  const airThrustAcceleration =
+    throttle *
+    THRUST_ACCELERATION *
+    clamp(1 - state.speed / THRUST_ZERO_SPEED, 0, 1);
   const parasiteDrag = PARASITE_DRAG_COEFFICIENT * state.speed * state.speed;
   const inducedDrag =
     ANGLE_OF_ATTACK_DRAG * angleOfAttack * angleOfAttack;
   const stallDrag = stalled ? STALL_EXTRA_DRAG : 0;
   const acceleration =
-    throttle * THRUST_ACCELERATION +
-    gravityAlongFlightPath -
+    airThrustAcceleration +
+    gravityAlongFlightPath +
+    diveEnergyRecovery -
     parasiteDrag -
     inducedDrag -
     brake * AIRBRAKE_DECELERATION -
     stallDrag;
-  const speed = clamp(state.speed + acceleration * dt, 0, MAX_SPEED);
+  const speed = clamp(
+    state.speed + acceleration * dt,
+    0,
+    MAX_SIMULATION_SPEED
+  );
 
   if (
     wasStalled &&

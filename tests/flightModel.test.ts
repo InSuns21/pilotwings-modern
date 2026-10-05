@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   GLIDE_TRIM_SPEED,
+  LEVEL_FLIGHT_MAX_SPEED,
   RUNWAY_GROUND_Y,
   STALL_RECOVERY_SPEED,
   STALL_SPEED,
@@ -110,6 +111,75 @@ describe('arcade flight model', () => {
     expect(state.speed).toBeGreaterThan(GLIDE_TRIM_SPEED + 2);
     expect(state.position.y).toBeLessThan(initialAltitude);
     expect(state.flightPathAngle).toBeLessThan(0);
+  });
+
+  it('makes a moderate cruise-speed dive produce a visible airspeed gain', () => {
+    let state = {
+      ...createInitialFlightState(),
+      onGround: false,
+      speed: 30,
+      position: { x: 0, y: 200, z: 0 },
+      flightPathAngle: -0.07
+    };
+
+    const initialSpeed = state.speed;
+    const initialAltitude = state.position.y;
+
+    for (let i = 0; i < 3 * 60; i += 1) {
+      state = stepArcadeFlight(
+        state,
+        { ...neutral, pitch: -0.2 },
+        1 / 60
+      );
+    }
+
+    expect(state.speed).toBeGreaterThan(initialSpeed + 1);
+    expect(state.position.y).toBeLessThan(initialAltitude);
+    expect(state.flightPathAngle).toBeLessThan(-0.1);
+  });
+
+  it('uses thrust and drag balance for level-flight top speed instead of a hard airspeed cap', () => {
+    let state = {
+      ...createInitialFlightState(),
+      onGround: false,
+      speed: 30,
+      position: { x: 0, y: 800, z: 0 },
+      pitch: -2 * (Math.PI / 180),
+      flightPathAngle: 0
+    };
+
+    for (let i = 0; i < 30 * 60; i += 1) {
+      state = stepArcadeFlight(
+        state,
+        { ...neutral, pitch: -2 / 30, throttle: 1 },
+        1 / 60
+      );
+    }
+
+    expect(state.flightPathAngle).toBeCloseTo(0, 2);
+    expect(state.speed).toBeGreaterThan(LEVEL_FLIGHT_MAX_SPEED - 1);
+    expect(state.speed).toBeLessThan(LEVEL_FLIGHT_MAX_SPEED + 1);
+  });
+
+  it('can exceed the level-flight top speed in a steep dive', () => {
+    let state = {
+      ...createInitialFlightState(),
+      onGround: false,
+      speed: LEVEL_FLIGHT_MAX_SPEED - 2,
+      position: { x: 0, y: 1200, z: 0 },
+      flightPathAngle: -4 * (Math.PI / 180)
+    };
+
+    for (let i = 0; i < 4 * 60; i += 1) {
+      state = stepArcadeFlight(
+        state,
+        { ...neutral, pitch: -0.5, throttle: 1 },
+        1 / 60
+      );
+    }
+
+    expect(state.speed).toBeGreaterThan(LEVEL_FLIGHT_MAX_SPEED + 2);
+    expect(state.flightPathAngle).toBeLessThan(-0.1);
   });
 
   it('trades airspeed for altitude when a climb is established', () => {
