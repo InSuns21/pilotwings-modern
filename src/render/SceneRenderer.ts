@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { AircraftModel } from './AircraftModel';
 import { flightOrientation, type FlightState } from '../flight/ArcadeFlightModel';
 import {
   LANDING_ZONE,
@@ -17,7 +18,7 @@ export class SceneRenderer {
   readonly #renderer: THREE.WebGLRenderer;
   readonly #scene = new THREE.Scene();
   readonly #camera = new THREE.PerspectiveCamera(62, 1, 0.1, 1600);
-  readonly #aircraft = new THREE.Group();
+  readonly #aircraft = new AircraftModel();
   readonly #resizeObserver: ResizeObserver;
   readonly #ringMaterials: THREE.MeshStandardMaterial[] = [];
   readonly #landingMaterial = new THREE.MeshStandardMaterial({
@@ -38,6 +39,7 @@ export class SceneRenderer {
     this.#renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.#renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.#renderer.shadowMap.enabled = true;
+    this.#renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     host.append(this.#renderer.domElement);
 
     this.#scene.background = new THREE.Color(0x8fcdf8);
@@ -49,12 +51,19 @@ export class SceneRenderer {
     const sun = new THREE.DirectionalLight(0xffffff, 3);
     sun.position.set(-80, 130, 70);
     sun.castShadow = true;
-    this.#scene.add(sun);
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.camera.left = -320;
+    sun.shadow.camera.right = 320;
+    sun.shadow.camera.top = 260;
+    sun.shadow.camera.bottom = -260;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 420;
+    sun.target.position.set(100, 0, 0);
+    this.#scene.add(sun, sun.target);
 
     this.#buildAirport();
     this.#buildRings();
-    this.#buildAircraft();
-    this.#scene.add(this.#aircraft);
+    this.#scene.add(this.#aircraft.root);
 
     const initialForward = new THREE.Vector3(1, 0, 0);
     this.#camera.position.set(-190, 8, 0);
@@ -70,8 +79,9 @@ export class SceneRenderer {
   syncAircraft(state: FlightState): void {
     const rotation = flightOrientation(state);
 
-    this.#aircraft.position.set(state.position.x, state.position.y, state.position.z);
-    this.#aircraft.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+    this.#aircraft.root.position.set(state.position.x, state.position.y, state.position.z);
+    this.#aircraft.root.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+    this.#aircraft.updateVisuals(state.speed);
 
     const forward = new THREE.Vector3(
       Math.cos(state.heading),
@@ -131,10 +141,10 @@ export class SceneRenderer {
       return;
     }
 
-    this.#aircraft.visible = false;
+    this.#aircraft.root.visible = false;
     this.#crashStartedAt = performance.now();
     this.#crashEffect = new THREE.Group();
-    this.#crashEffect.position.copy(this.#aircraft.position);
+    this.#crashEffect.position.copy(this.#aircraft.root.position);
     this.#scene.add(this.#crashEffect);
 
     const flashMaterial = new THREE.MeshBasicMaterial({
@@ -196,7 +206,8 @@ export class SceneRenderer {
     this.#crashPieces = [];
     this.#crashSmoke = [];
     this.#crashStartedAt = 0;
-    this.#aircraft.visible = true;
+    this.#aircraft.resetAnimation();
+    this.#aircraft.root.visible = true;
   }
 
   render(): void {
@@ -404,50 +415,6 @@ export class SceneRenderer {
       mesh.castShadow = true;
       this.#scene.add(mesh);
     }
-  }
-
-  #buildAircraft(): void {
-    const body = new THREE.MeshStandardMaterial({
-      color: 0xfff1bf,
-      roughness: 0.62
-    });
-    const accent = new THREE.MeshStandardMaterial({
-      color: 0xd64d3b,
-      roughness: 0.58
-    });
-    const dark = new THREE.MeshStandardMaterial({
-      color: 0x29313b,
-      roughness: 0.65
-    });
-
-    const fuselage = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.5, 1.05), body);
-    fuselage.castShadow = true;
-    this.#aircraft.add(fuselage);
-
-    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.52, 1.2, 12), accent);
-    nose.rotation.z = -Math.PI / 2;
-    nose.position.x = 2.2;
-    nose.castShadow = true;
-    this.#aircraft.add(nose);
-
-    const wing = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.12, 5.4), accent);
-    wing.castShadow = true;
-    this.#aircraft.add(wing);
-
-    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.1, 2.3), body);
-    tail.position.x = -1.25;
-    tail.castShadow = true;
-    this.#aircraft.add(tail);
-
-    const fin = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.05, 0.12), accent);
-    fin.position.set(-1.2, 0.5, 0);
-    fin.castShadow = true;
-    this.#aircraft.add(fin);
-
-    const cockpit = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.38, 0.7), dark);
-    cockpit.position.set(0.65, 0.35, 0);
-    cockpit.castShadow = true;
-    this.#aircraft.add(cockpit);
   }
 
   #createGroundTexture(): THREE.CanvasTexture {
