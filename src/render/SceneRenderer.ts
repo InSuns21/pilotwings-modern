@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { AircraftModel } from './AircraftModel';
+import type { GameSelection } from '../game/GameCatalog';
 import { flightOrientation, type FlightState } from '../flight/ArcadeFlightModel';
 import {
   LANDING_ZONE,
@@ -18,7 +19,7 @@ export class SceneRenderer {
   readonly #renderer: THREE.WebGLRenderer;
   readonly #scene = new THREE.Scene();
   readonly #camera = new THREE.PerspectiveCamera(62, 1, 0.1, 1600);
-  readonly #aircraft = new AircraftModel();
+  readonly #aircraft: AircraftModel;
   readonly #resizeObserver: ResizeObserver;
   readonly #ringMaterials: THREE.MeshStandardMaterial[] = [];
   readonly #landingMaterial = new THREE.MeshStandardMaterial({
@@ -34,7 +35,11 @@ export class SceneRenderer {
   #crashSmoke: THREE.Mesh[] = [];
   #crashStartedAt = 0;
 
-  constructor(private readonly host: HTMLElement) {
+  constructor(
+    private readonly host: HTMLElement,
+    selection: GameSelection
+  ) {
+    this.#aircraft = this.#createAircraft(selection);
     this.#renderer = new THREE.WebGLRenderer({ antialias: true });
     this.#renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.#renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -61,8 +66,8 @@ export class SceneRenderer {
     sun.target.position.set(100, 0, 0);
     this.#scene.add(sun, sun.target);
 
-    this.#buildAirport();
-    this.#buildRings();
+    this.#buildWorld(selection);
+    this.#buildTaskVisuals(selection);
     this.#scene.add(this.#aircraft.root);
 
     const initialForward = new THREE.Vector3(1, 0, 0);
@@ -227,6 +232,29 @@ export class SceneRenderer {
     this.#resizeObserver.disconnect();
     this.#renderer.dispose();
     this.#renderer.domElement.remove();
+  }
+
+  #createAircraft(selection: GameSelection): AircraftModel {
+    switch (selection.aircraft.id) {
+      case 'trainer-01':
+        return new AircraftModel();
+    }
+  }
+
+  #buildWorld(selection: GameSelection): void {
+    switch (selection.world.id) {
+      case 'training-island':
+        this.#buildAirport();
+        return;
+    }
+  }
+
+  #buildTaskVisuals(selection: GameSelection): void {
+    switch (selection.task.id) {
+      case 'ring-training':
+        this.#buildRings();
+        return;
+    }
   }
 
   #updateCrashEffect(): void {
