@@ -31,7 +31,7 @@ A browser-first 3D flying game inspired by the approachable mission-flight genre
 : Shared world geometry used by both rendering and collision/safety judgments. Terrain visuals and terrain collision must use the same source data.
 
 `src/render/`
-: Owns Three.js scene graph, level chase camera, airport/ground visuals, aircraft mesh, mission visualization, and crash effects.
+: Owns Three.js scene graph, level chase camera, airport/ground visuals, the dedicated procedural aircraft model, mission visualization, and crash effects.
 
 `src/game/`
 : Owns mission progression, safety judgments, crash causes, and application orchestration.
@@ -48,6 +48,16 @@ A browser-first 3D flying game inspired by the approachable mission-flight genre
 - Touchdown is fatal when speed, pitch/roll attitude, or descent rate exceeds configured safe limits.
 - A crash freezes simulation, marks the mission failed, reports the reason, and triggers a visual wreck/explosion effect.
 - Safety rules are deterministic and unit-tested.
+
+## Aircraft visual rules
+
+- The playable aircraft is built in `src/render/AircraftModel.ts`; do not rebuild aircraft geometry inside `SceneRenderer`.
+- The baseline style is a readable low-poly trainer aircraft, not placeholder box geometry.
+- Preserve a recognizable fuselage, tapered main wing, tailplane/fin, canopy, landing gear, propeller, and front/rear silhouette.
+- Propeller animation is visual-only and must not affect deterministic flight simulation.
+- Flight-state transforms remain authoritative; visual detail must not change control or safety thresholds.
+- Cast/receive shadows should remain enabled for the aircraft and runway environment.
+- Visual refinements should remain original/procedural unless properly licensed assets are introduced.
 
 ## Camera rules
 
