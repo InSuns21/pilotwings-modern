@@ -248,7 +248,7 @@ function disposeObject(root: THREE.Object3D): void {
 }
 
 function disposeMaterial(
-  material: THREE.Material | readonly THREE.Material[]
+  material: THREE.Material | THREE.Material[]
 ): void {
   if (Array.isArray(material)) {
     material.forEach((entry) => entry.dispose());
