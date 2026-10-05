@@ -52,12 +52,16 @@ Controllability remains more important than rigid-body purity, but flight must h
 - Around 50 km/h should remain visibly within the current trainer's stall regime unless the aircraft model is deliberately re-tuned.
 - Excessive nose-high attitude must be observable before loss of control.
 - Safe landing limits for forward speed, descent rate, pitch, and roll must be explicit constants.
+- Landing pitch limits must remain asymmetric: normal positive flare attitude is allowed substantially farther than nose-down touchdown attitude.
 - Terrain rendering and terrain collision must share source geometry.
 - Ground/terrain impacts and unsafe touchdowns must stop flight immediately.
 - Crash causes must remain distinguishable in code and UI.
 - Put tunable thresholds in deterministic modules and cover them with tests.
 - Do not reintroduce a fixed airborne coasting deceleration such as a constant `-2 m/s²`.
 - Airborne longitudinal speed should follow an energy-style model: binary thrust + gravity along the flight path - speed-dependent drag - brake/stall drag.
+- Never equate aircraft pitch with flight-path angle. Pitch is attitude; flight-path angle is trajectory. Vertical speed must come from flight-path angle, not directly from pitch.
+- Preserve finite flight-path response to pitch so a flare can have positive pitch while the aircraft is still descending.
+- Derive angle of attack from pitch minus flight-path angle and use it for stall/drag behavior.
 - With THRUST off and neutral pitch input, the current trainer should naturally trim into a shallow glide and settle near its configured glide speed instead of bleeding speed indefinitely.
 - Nose-up must trade speed for altitude; nose-down must trade altitude for speed.
 - Keep THRUST binary unless the user explicitly requests a staged/analog throttle model.
@@ -76,7 +80,7 @@ Controllability remains more important than rigid-body purity, but flight must h
 - Keep the chase camera horizon-stable.
 - Follow aircraft heading and preserve a stable center reticle.
 - Ground motion, altitude, terrain hazards, and runway alignment must remain visually readable.
-- HUD should expose the quantities needed for safe landing, including speed, pitch, and vertical speed.
+- HUD should expose the quantities needed for safe landing, including speed, pitch, flight-path angle, and vertical speed.
 
 ## Working rules
 
