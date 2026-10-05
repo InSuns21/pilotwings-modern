@@ -371,6 +371,25 @@ button {
   border-radius: 50%;
 }
 
+.world-attribution {
+  position: absolute;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(10px, env(safe-area-inset-bottom));
+  z-index: 9;
+  max-width: min(480px, calc(100vw - 24px));
+  padding: 5px 8px;
+  border-radius: 7px;
+  color: rgb(255 255 255 / 68%);
+  background: rgb(7 17 31 / 54%);
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.world-attribution[hidden] {
+  display: none;
+}
+
 .camera-note {
   position: absolute;
   top: 18px;
@@ -660,6 +679,59 @@ button {
   line-height: 1.5;
 }
 
+.world-settings {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 8px 14px;
+  align-items: center;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgb(49 88 117 / 16%);
+  border-radius: 12px;
+  background: rgb(232 224 191 / 78%);
+}
+
+.world-settings[hidden] {
+  display: none;
+}
+
+.world-settings label {
+  display: grid;
+  grid-template-columns: auto minmax(140px, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.world-settings label span {
+  color: #8a6848;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.world-settings input {
+  width: 100%;
+  accent-color: #d94f3d;
+}
+
+.world-settings output {
+  min-width: 54px;
+  color: #24455e;
+  font-size: 13px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.world-settings small {
+  grid-column: 1 / -1;
+  color: #60736f;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
 .start-summary {
   position: relative;
   z-index: 1;
@@ -756,6 +828,15 @@ button {
 }
 
 @media (max-width: 760px) {
+  .world-settings {
+    grid-template-columns: 1fr auto;
+  }
+
+  .world-settings label {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
   .start-screen {
     display: block;
   }

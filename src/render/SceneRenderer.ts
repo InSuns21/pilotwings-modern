@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { AircraftModel } from './AircraftModel';
+import { createMatsumotoWorldVisual } from './MatsumotoWorldVisual';
 import type { GameSelection } from '../game/GameCatalog';
 import { flightOrientation, type FlightState } from '../flight/ArcadeFlightModel';
 import {
@@ -7,7 +8,8 @@ import {
   TRAINING_RINGS,
   type TrainingMissionProgress
 } from '../game/TrainingMission';
-import { createTrainingIslandVisual, type TrainingIslandVisual } from './TrainingIslandVisual';
+import { createTrainingIslandVisual } from './TrainingIslandVisual';
+import type { WorldRuntime } from '../world/WorldRuntime';
 
 interface CrashPiece {
   readonly mesh: THREE.Mesh;
@@ -21,7 +23,7 @@ export class SceneRenderer {
   readonly #camera = new THREE.PerspectiveCamera(62, 1, 0.1, 1600);
   readonly #aircraft: AircraftModel;
   readonly #resizeObserver: ResizeObserver;
-  #worldVisual: TrainingIslandVisual | null = null;
+  #worldVisual: { readonly root: THREE.Group; dispose(): void } | null = null;
   readonly #ringMaterials: THREE.MeshStandardMaterial[] = [];
   readonly #landingMaterial = new THREE.MeshStandardMaterial({
     color: 0x61d174,
@@ -38,7 +40,8 @@ export class SceneRenderer {
 
   constructor(
     private readonly host: HTMLElement,
-    selection: GameSelection
+    selection: GameSelection,
+    worldRuntime: WorldRuntime
   ) {
     this.#aircraft = this.#createAircraft(selection);
     this.#renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -48,8 +51,15 @@ export class SceneRenderer {
     this.#renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     host.append(this.#renderer.domElement);
 
-    this.#scene.background = new THREE.Color(0x8fcdf8);
-    this.#scene.fog = new THREE.Fog(0x8fcdf8, 260, 1050);
+    if (worldRuntime.id === 'matsumoto-real') {
+      this.#camera.far = 12_000;
+      this.#camera.updateProjectionMatrix();
+      this.#scene.background = new THREE.Color(0xa9cadd);
+      this.#scene.fog = new THREE.Fog(0xa9cadd, 4200, 10_500);
+    } else {
+      this.#scene.background = new THREE.Color(0x8fcdf8);
+      this.#scene.fog = new THREE.Fog(0x8fcdf8, 260, 1050);
+    }
 
     const hemi = new THREE.HemisphereLight(0xffffff, 0x4b633d, 2.4);
     this.#scene.add(hemi);
@@ -67,7 +77,7 @@ export class SceneRenderer {
     sun.target.position.set(100, 0, 0);
     this.#scene.add(sun, sun.target);
 
-    this.#buildWorld(selection);
+    this.#buildWorld(selection, worldRuntime);
     this.#buildTaskVisuals(selection);
     this.#scene.add(this.#aircraft.root);
 
@@ -244,10 +254,19 @@ export class SceneRenderer {
     }
   }
 
-  #buildWorld(selection: GameSelection): void {
+  #buildWorld(selection: GameSelection, worldRuntime: WorldRuntime): void {
     switch (selection.world.id) {
       case 'training-island':
         this.#worldVisual = createTrainingIslandVisual();
+        this.#scene.add(this.#worldVisual.root);
+        this.#buildAirportOverlays();
+        return;
+
+      case 'matsumoto-real':
+        if (worldRuntime.id !== 'matsumoto-real') {
+          throw new Error('Matsumoto world runtime did not initialize');
+        }
+        this.#worldVisual = createMatsumotoWorldVisual(worldRuntime);
         this.#scene.add(this.#worldVisual.root);
         this.#buildAirportOverlays();
         return;
