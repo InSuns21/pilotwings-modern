@@ -1,114 +1,117 @@
-# Pilotwings Modern — Workspace System Prompt
+# Pilotwings Modern — ワークスペース・システムプロンプト
 
-You are working in the `pilotwings-modern` repository: an original browser-based 3D flight game inspired by the approachable mission-flight genre.
+あなたは `pilotwings-modern` リポジトリで作業します。このプロジェクトは、親しみやすいミッション飛行ゲームに着想を得た、オリジナルのブラウザ向け3Dフライトゲームです。
 
-## Mission
+## 目的
 
-Build a small, fast, understandable browser game centered on controllable mission flight while remaining deployable as static files on GitHub Pages.
+操作しやすいミッション飛行を中心にした、小さく、軽く、理解しやすいブラウザゲームを構築します。GitHub Pages に静的ファイルとしてデプロイ可能な構成を維持してください。
 
-## Hard constraints
+## 絶対条件
 
-- Runtime: modern desktop/mobile browsers.
-- Language/build: TypeScript + Vite.
-- Rendering: Three.js.
-- Rapier 3D WASM remains available for aircraft/world collision integration.
-- Tests: Vitest for deterministic timing, input, flight, safety, and mission behavior.
-- Deployment: GitHub Pages from GitHub Actions.
-- Production base path must remain compatible with `/pilotwings-modern/`.
-- Tablet/touch play is a supported first-class input mode.
-- Do not introduce copied/ripped Nintendo assets, ROM data, source code, maps, music, or proprietary game content.
+- 実行環境: モダンなデスクトップ / モバイルブラウザ
+- 言語・ビルド: TypeScript + Vite
+- 描画: Three.js
+- Rapier 3D WASM は機体 / ワールド衝突統合用として利用可能な状態を維持する
+- テスト: タイミング、入力、飛行、安全判定、ミッション挙動を Vitest で決定論的に検証する
+- デプロイ: GitHub Actions から GitHub Pages
+- 本番 base path は `/pilotwings-modern/` 互換を維持する
+- タブレット / タッチ操作を第一級の対応対象とする
+- Nintendo のコピー / リッピング済みアセット、ROMデータ、ソースコード、マップ、音楽、その他のプロプライエタリなゲーム内容を導入しない
 
-## Baseline game loop
+## 基本ゲームループ
 
-The training mission must preserve all of these:
+訓練ミッションでは、以下を必ず維持します。
 
-1. runway takeoff;
-2. ordered ring traversal;
-3. safe approach and landing;
-4. recoverable stall / nose-high warnings;
-5. fatal mountain/ground collision;
-6. fatal unsafe touchdown based on speed, attitude, or descent rate;
-7. GAME OVER with a specific failure reason and restart.
+1. 滑走路から離陸
+2. リングを順番に通過
+3. 安全な進入と着陸
+4. 回復可能な失速 / 機首上げすぎ警告
+5. 山・地面への衝突は致命的
+6. 速度、姿勢、降下率に基づく危険な接地は致命的
+7. 具体的な失敗理由を示す GAME OVER とリスタート
 
-## Architecture
+## アーキテクチャ
 
-- `src/core`: timing and engine primitives.
-- `src/flight`: deterministic arcade flight state/control law.
-- `src/input`: keyboard/touch/gamepad -> normalized control state.
-- `src/physics`: Rapier integration driven by authoritative flight state.
-- `src/world`: shared terrain/runway geometry for both visuals and collision judgments.
-- `src/render`: scene, level chase camera, terrain/airport, dedicated aircraft model, mission and crash visuals.
-- `src/game`: mission state, safety judgments, crash handling, and orchestration.
+- `src/core`: タイミングとエンジン基礎要素
+- `src/flight`: 決定論的なアーケード飛行状態 / 制御則
+- `src/input`: keyboard / touch / gamepad → 正規化済み入力
+- `src/physics`: 権威ある飛行状態から駆動される Rapier 統合
+- `src/world`: 描画と衝突判定で共有する地形 / 滑走路ジオメトリ
+- `src/render`: シーン、水平維持チェイスカメラ、地形 / 空港、専用機体モデル、ミッション / 墜落演出
+- `src/game`: ミッション状態、安全判定、墜落処理、全体オーケストレーション
 
-## Flight and failure principles
+## 飛行・失敗判定の原則
 
-Controllability remains more important than rigid-body purity, but flight must have meaningful failure modes.
+剛体物理の純粋さより操作性を優先します。ただし、飛行には意味のある失敗条件を持たせます。
 
-- Do not reintroduce free rigid-body torque control.
-- Pitch/roll should be bounded and self-stabilizing.
-- Yaw must remain non-oscillatory.
-- Stalls must affect actual flight behavior, not only HUD text.
-- Stall entry and recovery should use hysteresis: once stalled, the aircraft must regain both adequate airspeed and a safe nose attitude before recovery.
-- Around 50 km/h should remain visibly within the current trainer's stall regime unless the aircraft model is deliberately re-tuned.
-- Excessive nose-high attitude must be observable before loss of control.
-- Safe landing limits for forward speed, descent rate, pitch, and roll must be explicit constants.
-- Landing pitch limits must remain asymmetric: normal positive flare attitude is allowed substantially farther than nose-down touchdown attitude.
-- Terrain rendering and terrain collision must share source geometry.
-- Ground/terrain impacts and unsafe touchdowns must stop flight immediately.
-- Crash causes must remain distinguishable in code and UI.
-- Put tunable thresholds in deterministic modules and cover them with tests.
-- Do not reintroduce a fixed airborne coasting deceleration such as a constant `-2 m/s²`.
-- Airborne longitudinal speed should follow an energy-style model: binary thrust + gravity along the flight path - speed-dependent drag - brake/stall drag.
-- Never equate aircraft pitch with flight-path angle. Pitch is attitude; flight-path angle is trajectory. Vertical speed must come from flight-path angle, not directly from pitch.
-- Preserve finite flight-path response to pitch so a flare can have positive pitch while the aircraft is still descending.
-- Derive angle of attack from pitch minus flight-path angle and use it for stall/drag behavior.
-- With THRUST off and neutral pitch input, the current trainer should naturally trim into a shallow glide and settle near its configured glide speed instead of bleeding speed indefinitely.
-- Nose-up must trade speed for altitude; nose-down must trade altitude for speed.
-- Keep THRUST binary unless the user explicitly requests a staged/analog throttle model.
+- 自由な剛体トルク制御へ戻さない
+- ピッチ / ロールは上限を持ち、入力を離すと安定側へ戻る
+- ヨーは振動しないこと
+- 失速はHUD表示だけでなく実際の飛行挙動に影響させる
+- 失速への進入と回復にはヒステリシスを持たせる。一度失速したら、十分な速度と安全な迎角を取り戻すまで回復させない
+- 現在の練習機では、意図的な再調整をしない限り約50 km/hを明確な失速域として扱う
+- 過度な機首上げ姿勢は、操縦不能になる前に観測可能であること
+- 安全着陸の前進速度、降下率、ピッチ、ロールの限界値は明示的な定数にする
+- 着陸ピッチ限界は非対称にする。通常の正のフレア姿勢は、機首下げ接地より大きく許容する
+- 地形描画と地形衝突判定は同一のソースジオメトリを使う
+- 地面 / 地形への衝突と危険な接地は即座に飛行を終了する
+- 墜落原因はコード上でもUI上でも区別できる状態を保つ
+- 調整可能なしきい値は決定論的なモジュールに置き、テストで固定する
+- 空中で一定の `-2 m/s²` のような固定惰性減速を再導入しない
+- 空中の前後方向速度は、エネルギー飛行モデルに従わせる: 2値THRUST + 飛行経路方向の重力 - 速度依存抗力 - BRAKE / 失速抗力
+- 機体ピッチと飛行経路角を同一視しない。ピッチは姿勢、飛行経路角は軌道である。垂直速度はピッチから直接ではなく、飛行経路角から求める
+- ピッチに対する飛行経路の追従は有限速度にする。これにより、機首を上げたまま降下を続けるフレアを成立させる
+- 迎角は `pitch - flightPathAngle` から求め、失速 / 抗力挙動に使う
+- THRUST OFFかつピッチ入力中立では、速度を失い続けるのではなく、現在の練習機が浅い滑空へ自然に入り、設定した滑空速度付近へ落ち着くようにする
+- 機首上げでは速度を高度へ、機首下げでは高度を速度へ交換する
+- ユーザーが明示的に要求しない限り、THRUSTは2値のままとし、段階式 / アナログスロットルへ変更しない
 
-## Aircraft presentation principles
+## 機体表示の原則
 
-- Keep aircraft geometry isolated in `src/render/AircraftModel.ts`.
-- The baseline aircraft must read immediately as a small propeller trainer: shaped fuselage, tapered wings, tail surfaces, canopy, landing gear, propeller, and useful color accents.
-- Do not regress to primitive box-and-board placeholder silhouettes.
-- Keep the style low-poly and performant on tablets.
-- Propeller rotation/blur and shadows are visual feedback only and must not feed back into deterministic simulation.
-- Preserve the +X visual nose/forward convention used by the current flight state and camera.
+- 機体ジオメトリは `src/render/AircraftModel.ts` に集約する
+- 基本機体は、小型プロペラ練習機として一目で認識できる形状にする。胴体、テーパー翼、尾翼、キャノピー、着陸脚、プロペラ、識別しやすい色分けを維持する
+- 箱と板を組み合わせただけのプレースホルダー形状へ退化させない
+- タブレットでも軽快に動くローポリ表現を維持する
+- プロペラ回転 / ブラーや影は視覚フィードバック専用とし、決定論的な飛行シミュレーションへ影響させない
+- 現在の飛行状態とカメラが使う「+Xが機首 / 前方」という規約を維持する
 
-## Camera and readability principles
+## カメラ・視認性の原則
 
-- Keep the chase camera horizon-stable.
-- Follow aircraft heading and preserve a stable center reticle.
-- Ground motion, altitude, terrain hazards, and runway alignment must remain visually readable.
-- HUD should expose the quantities needed for safe landing, including speed, pitch, flight-path angle, and vertical speed.
+- チェイスカメラの水平を安定させる
+- 機体の方位へ追従しつつ、安定した中央レティクルを維持する
+- 地面の流れ、高度、地形の危険、滑走路へのアラインメントを視認しやすくする
+- HUDには安全着陸に必要な速度、ピッチ、飛行経路角、垂直速度を表示する
 
-## Working rules
+## 作業ルール
 
-Before editing, inspect relevant files and consider controllability, safety judgments, terrain consistency, mission completion, touch ergonomics, and GitHub Pages.
+編集前に、関連ファイルを確認し、操作性、安全判定、地形整合性、ミッション完了条件、タッチ操作性、GitHub Pagesへの影響を考慮します。
 
-While editing:
+編集時:
 
-- keep simulation deterministic and fixed-step;
-- keep device-specific input inside `src/input`;
-- preserve a normalized brake input across keyboard, touch, and future gamepad devices;
-- use that brake as airbrake drag in flight and stronger wheel braking on the ground;
-- keep terrain source data in `src/world`;
-- preserve multi-touch and safe-area behavior;
-- avoid dependencies unless they remove meaningful complexity;
-- prefer procedural/original assets.
+- シミュレーションは決定論的・固定ステップを維持する
+- デバイス固有入力は `src/input` 内に置く
+- keyboard / touch / 将来の gamepad を通して正規化された brake 入力を維持する
+- brake は空中ではエアブレーキ抗力、地上ではより強いホイールブレーキとして使う
+- 地形ソースデータは `src/world` に置く
+- マルチタッチと safe-area 対応を維持する
+- 意味のある複雑性削減にならない依存ライブラリは追加しない
+- オリジナル / 手続き生成アセットを優先する
 
-Verification:
+## 検証
 
-- run `npm run typecheck`;
-- run `npm test`;
-- run `npm run build`;
-- add focused tests when changing flight dynamics, safety thresholds, terrain collisions, mission gates, or input normalization.
+以下を実行します。
 
-## Near-term roadmap
+- `npm run typecheck`
+- `npm test`
+- `npm run build`
 
-1. tune stall and landing thresholds from tablet play;
-2. add landing/crash scoring and stronger runway feedback;
-3. add gamepad support;
-4. add additional missions and terrain;
-5. improve scenery and aircraft assets;
-6. add audio, progression, and persistence.
+飛行力学、安全しきい値、地形衝突、ミッションゲート、入力正規化を変更した場合は、焦点を絞ったテストを追加します。
+
+## 直近のロードマップ
+
+1. タブレットでの実プレイ結果をもとに失速・着陸しきい値を調整
+2. 着陸 / 墜落スコアリングと滑走路フィードバックを強化
+3. ゲームパッド対応
+4. ミッションと地形を追加
+5. 景観と機体アセットを改善
+6. オーディオ、進行要素、永続化を追加
