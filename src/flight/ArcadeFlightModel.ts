@@ -19,22 +19,26 @@ export interface FlightState {
   readonly pitch: number;
   readonly roll: number;
   readonly speed: number;
+  readonly verticalSpeed: number;
   readonly onGround: boolean;
+  readonly stalled: boolean;
 }
 
 export const RUNWAY_GROUND_Y = 0.85;
 export const TAKEOFF_SPEED = 18;
 export const MAX_SPEED = 52;
+export const STALL_SPEED = 13.5;
+export const STALL_PITCH = 25 * (Math.PI / 180);
 
 const DEG = Math.PI / 180;
-const MAX_PITCH = 20 * DEG;
+const MAX_PITCH = 30 * DEG;
 const MAX_ROLL = 38 * DEG;
 const AIR_PITCH_RATE = 48 * DEG;
+const STALL_PITCH_DOWN_RATE = 62 * DEG;
 const AIR_ROLL_RATE = 78 * DEG;
 const GROUND_YAW_RATE = 24 * DEG;
 const DIRECT_YAW_RATE = 28 * DEG;
 const BANK_TURN_RATE = 52 * DEG;
-const STALL_SPEED = 12;
 
 export function createInitialFlightState(): FlightState {
   return {
@@ -43,7 +47,9 @@ export function createInitialFlightState(): FlightState {
     pitch: 0,
     roll: 0,
     speed: 0,
-    onGround: true
+    verticalSpeed: 0,
+    onGround: true,
+    stalled: false
   };
 }
 
@@ -59,7 +65,7 @@ export function stepArcadeFlight(
   const yawInput = clamp(input.yaw, -1, 1);
 
   const acceleration = throttle > 0.001 ? 11 * throttle : state.onGround ? -5.5 : -2;
-  const speed = clamp(state.speed + acceleration * dt, 0, MAX_SPEED);
+  let speed = clamp(state.speed + acceleration * dt, 0, MAX_SPEED);
 
   const pitchTarget = pitchInput * MAX_PITCH;
   const rollTarget = state.onGround ? 0 : rollInput * MAX_ROLL;
@@ -67,10 +73,24 @@ export function stepArcadeFlight(
   let pitch = moveTowards(state.pitch, pitchTarget, AIR_PITCH_RATE * dt);
   let roll = moveTowards(state.roll, rollTarget, AIR_ROLL_RATE * dt);
 
+  let stalled =
+    !state.onGround &&
+    (speed < STALL_SPEED || (pitch > STALL_PITCH && speed < 28));
+
+  if (stalled) {
+    pitch = moveTowards(pitch, -9 * DEG, STALL_PITCH_DOWN_RATE * dt);
+    roll = moveTowards(roll, 0, AIR_ROLL_RATE * 0.75 * dt);
+    speed = clamp(speed + 2.5 * dt, 0, MAX_SPEED);
+
+    stalled = speed < STALL_SPEED || (pitch > STALL_PITCH && speed < 28);
+  }
+
   const speedFactor = clamp(speed / 32, 0.25, 1.15);
+  const controlFactor = stalled ? 0.35 : 1;
   const headingRate = state.onGround
     ? yawInput * GROUND_YAW_RATE
-    : yawInput * DIRECT_YAW_RATE + Math.sin(roll) * BANK_TURN_RATE * speedFactor;
+    : (yawInput * DIRECT_YAW_RATE + Math.sin(roll) * BANK_TURN_RATE * speedFactor) *
+      controlFactor;
   const heading = wrapAngle(state.heading + headingRate * dt);
 
   const horizontalSpeed = speed * Math.cos(pitch);
@@ -92,7 +112,9 @@ export function stepArcadeFlight(
         pitch,
         roll: 0,
         speed,
-        onGround: true
+        verticalSpeed: 0,
+        onGround: true,
+        stalled: false
       };
     }
 
@@ -106,13 +128,16 @@ export function stepArcadeFlight(
       pitch,
       roll,
       speed,
-      onGround: false
+      verticalSpeed: Math.max(1.5, speed * Math.sin(pitch)),
+      onGround: false,
+      stalled: false
     };
   }
 
-  const stallSink = Math.max(0, STALL_SPEED - speed) * 0.45;
-  const climbRate = speed * Math.sin(pitch) - stallSink;
-  const nextY = state.position.y + climbRate * dt;
+  const lowSpeedSink = Math.max(0, STALL_SPEED - speed) * 0.65;
+  const stallSink = stalled ? 5.5 : 0;
+  const verticalSpeed = speed * Math.sin(pitch) - lowSpeedSink - stallSink;
+  const nextY = state.position.y + verticalSpeed * dt;
 
   if (nextY <= RUNWAY_GROUND_Y) {
     return {
@@ -122,10 +147,12 @@ export function stepArcadeFlight(
         z: state.position.z + dz
       },
       heading,
-      pitch: clamp(pitch, -4 * DEG, 7 * DEG),
-      roll: 0,
+      pitch,
+      roll,
       speed,
-      onGround: true
+      verticalSpeed: 0,
+      onGround: true,
+      stalled: false
     };
   }
 
@@ -139,7 +166,9 @@ export function stepArcadeFlight(
     pitch,
     roll,
     speed,
-    onGround: false
+    verticalSpeed,
+    onGround: false,
+    stalled
   };
 }
 
@@ -152,6 +181,10 @@ export function flightOrientation(state: FlightState): QuaternionState {
 
 export function headingDegrees(state: FlightState): number {
   return ((state.heading / DEG) % 360 + 360) % 360;
+}
+
+export function pitchDegrees(state: FlightState): number {
+  return state.pitch / DEG;
 }
 
 function clamp(value: number, min: number, max: number): number {

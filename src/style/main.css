@@ -413,3 +413,102 @@ button {
     width: 96px;
   }
 }
+
+
+.mission-phase[data-phase="failed"] {
+  color: #ff9a8f !important;
+  border-color: rgb(255 92 76 / 48%);
+  background: rgb(92 12 12 / 32%);
+}
+
+.flight-warning {
+  padding: 8px 10px;
+  border: 1px solid rgb(255 193 66 / 52%);
+  border-radius: 7px;
+  color: #ffe5a0;
+  background: rgb(92 57 0 / 62%);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  animation: warning-pulse 0.75s ease-in-out infinite alternate;
+}
+
+.flight-warning[data-level="stall"] {
+  border-color: rgb(255 92 76 / 66%);
+  color: #ffd0ca;
+  background: rgb(102 15 8 / 72%);
+}
+
+.flight-warning[hidden] {
+  display: none;
+}
+
+.game-over-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(20 2 0 / 28%);
+  backdrop-filter: blur(2px);
+}
+
+.game-over-panel[hidden] {
+  display: none;
+}
+
+.game-over-card {
+  width: min(430px, calc(100vw - 40px));
+  padding: 24px 26px;
+  border: 1px solid rgb(255 120 94 / 48%);
+  border-radius: 14px;
+  text-align: center;
+  background: rgb(25 7 5 / 88%);
+  box-shadow: 0 22px 70px rgb(0 0 0 / 46%);
+}
+
+.game-over-kicker {
+  display: block;
+  margin-bottom: 5px;
+  color: #ff9c83;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.game-over-card strong {
+  display: block;
+  color: #fff1ea;
+  font-size: clamp(32px, 7vw, 56px);
+  line-height: 1;
+  letter-spacing: 0.08em;
+}
+
+.game-over-card p {
+  min-height: 2.6em;
+  margin: 18px 0;
+  color: #ffd4c9;
+  line-height: 1.45;
+}
+
+.game-over-card button {
+  min-width: 150px;
+  padding: 10px 18px;
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 9px;
+  color: #fff;
+  background: rgb(191 48 31 / 72%);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@keyframes warning-pulse {
+  from {
+    box-shadow: 0 0 0 rgb(255 126 69 / 0%);
+  }
+
+  to {
+    box-shadow: 0 0 18px rgb(255 126 69 / 28%);
+  }
+}

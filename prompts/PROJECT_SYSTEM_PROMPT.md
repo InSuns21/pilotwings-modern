@@ -8,93 +8,85 @@ Build a small, fast, understandable browser game centered on controllable missio
 
 ## Hard constraints
 
-- Runtime: modern desktop/mobile browsers; no server is required for the core game.
+- Runtime: modern desktop/mobile browsers.
 - Language/build: TypeScript + Vite.
 - Rendering: Three.js.
 - Rapier 3D WASM remains available for aircraft/world collision integration.
-- Tests: Vitest for deterministic timing, input, flight, and mission behavior.
+- Tests: Vitest for deterministic timing, input, flight, safety, and mission behavior.
 - Deployment: GitHub Pages from GitHub Actions.
 - Production base path must remain compatible with `/pilotwings-modern/`.
 - Tablet/touch play is a supported first-class input mode.
 - Do not introduce copied/ripped Nintendo assets, ROM data, source code, maps, music, or proprietary game content.
 
-## Current playable loop
+## Baseline game loop
 
-The baseline mission is:
+The training mission must preserve all of these:
 
-1. start on the runway;
-2. accelerate and take off;
-3. pass the ordered ring course;
-4. descend and land inside the marked runway landing zone.
-
-Do not regress this loop when adding features.
+1. runway takeoff;
+2. ordered ring traversal;
+3. safe approach and landing;
+4. recoverable stall / nose-high warnings;
+5. fatal mountain/ground collision;
+6. fatal unsafe touchdown based on speed, attitude, or descent rate;
+7. GAME OVER with a specific failure reason and restart.
 
 ## Architecture
 
-Respect these ownership boundaries:
-
-- `src/core`: timing and reusable engine primitives.
+- `src/core`: timing and engine primitives.
 - `src/flight`: deterministic arcade flight state/control law.
-- `src/input`: raw keyboard/touch/gamepad input -> normalized control state.
+- `src/input`: keyboard/touch/gamepad -> normalized control state.
 - `src/physics`: Rapier integration driven by authoritative flight state.
-- `src/render`: Three.js scene, level chase camera, ground/airport, aircraft, mission visuals.
-- `src/game`: mission state and orchestration.
+- `src/world`: shared terrain/runway geometry for both visuals and collision judgments.
+- `src/render`: scene, level chase camera, terrain/airport, aircraft, mission and crash visuals.
+- `src/game`: mission state, safety judgments, crash handling, and orchestration.
 
-## Flight-control principles
+## Flight and failure principles
 
-Controllability is more important than rigid-body purity for the baseline game.
+Controllability remains more important than rigid-body purity, but flight must have meaningful failure modes.
 
-- Do not control the aircraft by feeding raw pitch/roll/yaw torques directly into a free rigid body.
-- Pitch and roll should behave as bounded target attitudes and return toward level when input is released.
-- Yaw should command a bounded heading/turn rate and must not oscillate after release.
-- Bank should contribute to coordinated turning.
-- Keep takeoff, low-speed sink, landing, and maximum control authority predictable.
-- Preserve positive-axis semantics: pitch up, roll right, yaw right.
-- Put tunable flight constants in the deterministic flight module and cover meaningful behavior with tests.
+- Do not reintroduce free rigid-body torque control.
+- Pitch/roll should be bounded and self-stabilizing.
+- Yaw must remain non-oscillatory.
+- Stalls must affect actual flight behavior, not only HUD text.
+- Excessive nose-high attitude must be observable before loss of control.
+- Safe landing limits for forward speed, descent rate, pitch, and roll must be explicit constants.
+- Terrain rendering and terrain collision must share source geometry.
+- Ground/terrain impacts and unsafe touchdowns must stop flight immediately.
+- Crash causes must remain distinguishable in code and UI.
+- Put tunable thresholds in deterministic modules and cover them with tests.
 
 ## Camera and readability principles
 
-- Keep the default chase camera horizon-stable; do not inherit aircraft roll/pitch.
-- Follow heading so the camera always looks in the direction of travel.
-- Preserve a stable center reference/reticle.
-- Ground motion and altitude must be visually readable through tiles, markings, scenery, shadows, or equivalent cues.
-- Preserve visible runway and landing-zone guidance.
+- Keep the chase camera horizon-stable.
+- Follow aircraft heading and preserve a stable center reticle.
+- Ground motion, altitude, terrain hazards, and runway alignment must remain visually readable.
+- HUD should expose the quantities needed for safe landing, including speed, pitch, and vertical speed.
 
 ## Working rules
 
-Before editing:
-
-1. inspect relevant files and architecture docs;
-2. identify effects on controllability, camera readability, mission completion, input ergonomics, asset paths, and GitHub Pages;
-3. keep changes local to the narrowest owning module.
+Before editing, inspect relevant files and consider controllability, safety judgments, terrain consistency, mission completion, touch ergonomics, and GitHub Pages.
 
 While editing:
 
-- prefer explicit data flow over global mutable state;
 - keep simulation deterministic and fixed-step;
-- keep device-specific input details inside `src/input`;
+- keep device-specific input inside `src/input`;
+- keep terrain source data in `src/world`;
 - preserve multi-touch and safe-area behavior;
 - avoid dependencies unless they remove meaningful complexity;
-- prefer procedural/original assets for baseline scenery.
+- prefer procedural/original assets.
 
 Verification:
 
 - run `npm run typecheck`;
 - run `npm test`;
 - run `npm run build`;
-- add focused tests when changing flight dynamics, mission gates, or input normalization.
-
-Documentation:
-
-- update `docs/ARCHITECTURE.md` when module boundaries or simulation responsibilities change;
-- update `docs/DEVELOPMENT_RULES.md` when a durable workflow rule changes;
-- leave the repository understandable without relying on chat transcripts.
+- add focused tests when changing flight dynamics, safety thresholds, terrain collisions, mission gates, or input normalization.
 
 ## Near-term roadmap
 
-1. tune training mission from real tablet play;
-2. add touchdown/crash scoring and runway feedback;
+1. tune stall and landing thresholds from tablet play;
+2. add landing/crash scoring and stronger runway feedback;
 3. add gamepad support;
-4. add additional ring/landing missions;
+4. add additional missions and terrain;
 5. improve scenery and aircraft assets;
-6. add progression, scoring, audio, and polish.
+6. add audio, progression, and persistence.

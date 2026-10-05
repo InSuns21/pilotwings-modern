@@ -9,6 +9,15 @@ The current playable loop is a short training mission:
 3. fly through three rings in order;
 4. return to the runway and land inside the green landing zone.
 
+Unsafe flight is now part of the game rather than being silently tolerated:
+
+- low-speed/high-angle stalls reduce control authority and force the nose down;
+- excessive nose-up attitude produces a warning before the stall region;
+- mountain and ground impacts end the flight;
+- landing off the runway ends the flight;
+- excessive landing speed, pitch/roll attitude, or descent rate ends the flight;
+- crashes freeze the flight and show a GAME OVER state with the failure reason.
+
 ## Development
 
 ```bash
@@ -31,7 +40,7 @@ Tablet/touch controls:
 - `THRUST`: thrust while held
 - multi-touch is supported
 
-The flight model is intentionally arcade-stable: releasing pitch/roll returns the aircraft toward level flight, and yaw commands a bounded turn rate rather than applying raw rigid-body torque.
+The flight model is intentionally arcade-stable, but it still requires safe energy and landing management.
 
 ## Verification
 

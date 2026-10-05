@@ -5,6 +5,13 @@ import {
   TRAINING_RINGS,
   type TrainingMissionProgress
 } from '../game/TrainingMission';
+import { MOUNTAINS } from '../world/WorldGeometry';
+
+interface CrashPiece {
+  readonly mesh: THREE.Mesh;
+  readonly velocity: THREE.Vector3;
+  readonly spin: THREE.Vector3;
+}
 
 export class SceneRenderer {
   readonly #renderer: THREE.WebGLRenderer;
@@ -20,6 +27,11 @@ export class SceneRenderer {
     opacity: 0.38,
     roughness: 0.75
   });
+
+  #crashEffect: THREE.Group | null = null;
+  #crashPieces: CrashPiece[] = [];
+  #crashSmoke: THREE.Mesh[] = [];
+  #crashStartedAt = 0;
 
   constructor(private readonly host: HTMLElement) {
     this.#renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -46,7 +58,9 @@ export class SceneRenderer {
 
     const initialForward = new THREE.Vector3(1, 0, 0);
     this.#camera.position.set(-190, 8, 0);
-    this.#camera.lookAt(initialForward.multiplyScalar(20).add(new THREE.Vector3(-175, 2, 0)));
+    this.#camera.lookAt(
+      initialForward.multiplyScalar(20).add(new THREE.Vector3(-175, 2, 0))
+    );
 
     this.#resizeObserver = new ResizeObserver(() => this.resize());
     this.#resizeObserver.observe(host);
@@ -89,7 +103,11 @@ export class SceneRenderer {
 
   setMissionProgress(progress: TrainingMissionProgress): void {
     this.#ringMaterials.forEach((material, index) => {
-      if (index < progress.nextRingIndex) {
+      if (progress.phase === 'failed') {
+        material.color.setHex(0x7d2424);
+        material.emissive.setHex(0x260606);
+        material.opacity = 0.24;
+      } else if (index < progress.nextRingIndex) {
         material.color.setHex(0x64db74);
         material.emissive.setHex(0x123d18);
         material.opacity = 0.32;
@@ -108,7 +126,81 @@ export class SceneRenderer {
       progress.phase === 'landing' || progress.phase === 'complete' ? 0.72 : 0.28;
   }
 
+  triggerCrash(): void {
+    if (this.#crashEffect) {
+      return;
+    }
+
+    this.#aircraft.visible = false;
+    this.#crashStartedAt = performance.now();
+    this.#crashEffect = new THREE.Group();
+    this.#crashEffect.position.copy(this.#aircraft.position);
+    this.#scene.add(this.#crashEffect);
+
+    const flashMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffb13b,
+      transparent: true,
+      opacity: 0.95
+    });
+    const flash = new THREE.Mesh(new THREE.SphereGeometry(1.8, 16, 12), flashMaterial);
+    flash.name = 'crash-flash';
+    this.#crashEffect.add(flash);
+
+    const smokeMaterial = new THREE.MeshStandardMaterial({
+      color: 0x25282c,
+      transparent: true,
+      opacity: 0.72,
+      roughness: 1
+    });
+
+    for (let i = 0; i < 7; i += 1) {
+      const smoke = new THREE.Mesh(
+        new THREE.SphereGeometry(0.8 + i * 0.11, 10, 8),
+        smokeMaterial.clone()
+      );
+      smoke.position.set((i % 2 === 0 ? 1 : -1) * i * 0.18, i * 0.25, (i - 3) * 0.13);
+      this.#crashEffect.add(smoke);
+      this.#crashSmoke.push(smoke);
+    }
+
+    const debrisMaterial = new THREE.MeshStandardMaterial({
+      color: 0xd64d3b,
+      roughness: 0.8
+    });
+
+    for (let i = 0; i < 10; i += 1) {
+      const angle = (Math.PI * 2 * i) / 10;
+      const piece = new THREE.Mesh(
+        new THREE.BoxGeometry(0.45 + (i % 3) * 0.12, 0.16, 0.28),
+        debrisMaterial
+      );
+      piece.castShadow = true;
+      this.#crashEffect.add(piece);
+      this.#crashPieces.push({
+        mesh: piece,
+        velocity: new THREE.Vector3(
+          Math.cos(angle) * (5 + (i % 3) * 1.4),
+          5.5 + (i % 4) * 1.2,
+          Math.sin(angle) * (5 + (i % 2) * 1.8)
+        ),
+        spin: new THREE.Vector3(2 + i * 0.21, 3 + i * 0.17, 2.4 + i * 0.13)
+      });
+    }
+  }
+
+  resetCrashEffect(): void {
+    if (this.#crashEffect) {
+      this.#scene.remove(this.#crashEffect);
+    }
+    this.#crashEffect = null;
+    this.#crashPieces = [];
+    this.#crashSmoke = [];
+    this.#crashStartedAt = 0;
+    this.#aircraft.visible = true;
+  }
+
   render(): void {
+    this.#updateCrashEffect();
     this.#renderer.render(this.#scene, this.#camera);
   }
 
@@ -124,6 +216,39 @@ export class SceneRenderer {
     this.#resizeObserver.disconnect();
     this.#renderer.dispose();
     this.#renderer.domElement.remove();
+  }
+
+  #updateCrashEffect(): void {
+    if (!this.#crashEffect) {
+      return;
+    }
+
+    const elapsed = Math.min((performance.now() - this.#crashStartedAt) / 1000, 4);
+    const dt = 1 / 60;
+
+    const flash = this.#crashEffect.getObjectByName('crash-flash') as
+      | THREE.Mesh
+      | undefined;
+    if (flash) {
+      const material = flash.material as THREE.MeshBasicMaterial;
+      flash.scale.setScalar(1 + elapsed * 4.5);
+      material.opacity = Math.max(0, 0.95 - elapsed * 1.8);
+    }
+
+    for (const piece of this.#crashPieces) {
+      piece.velocity.y -= 9.81 * dt;
+      piece.mesh.position.addScaledVector(piece.velocity, dt);
+      piece.mesh.rotation.x += piece.spin.x * dt;
+      piece.mesh.rotation.y += piece.spin.y * dt;
+      piece.mesh.rotation.z += piece.spin.z * dt;
+    }
+
+    this.#crashSmoke.forEach((smoke, index) => {
+      smoke.position.y += (0.35 + index * 0.025) * dt;
+      smoke.scale.setScalar(1 + elapsed * (0.35 + index * 0.04));
+      const material = smoke.material as THREE.MeshStandardMaterial;
+      material.opacity = Math.max(0.18, 0.72 - elapsed * 0.12);
+    });
   }
 
   #buildAirport(): void {
@@ -247,17 +372,14 @@ export class SceneRenderer {
       roughness: 1
     });
 
-    for (const [x, z, scale] of [
-      [50, -180, 1.2],
-      [190, 190, 1.5],
-      [340, -210, 1.1],
-      [-120, 170, 0.9]
-    ] as const) {
+    for (const mountain of MOUNTAINS) {
       const hill = new THREE.Mesh(
-        new THREE.ConeGeometry(35 * scale, 48 * scale, 12),
+        new THREE.ConeGeometry(mountain.radius, mountain.height, 18),
         hillMaterial
       );
-      hill.position.set(x, 24 * scale, z);
+      hill.position.set(mountain.x, mountain.height / 2, mountain.z);
+      hill.castShadow = true;
+      hill.receiveShadow = true;
       this.#scene.add(hill);
     }
   }

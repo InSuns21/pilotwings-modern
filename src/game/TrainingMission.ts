@@ -17,7 +17,12 @@ export const LANDING_ZONE = {
   halfWidth: 10
 } as const;
 
-export type TrainingPhase = 'takeoff' | 'rings' | 'landing' | 'complete';
+export type TrainingPhase =
+  | 'takeoff'
+  | 'rings'
+  | 'landing'
+  | 'complete'
+  | 'failed';
 
 export interface TrainingMissionProgress {
   readonly phase: TrainingPhase;
@@ -33,11 +38,22 @@ export function createTrainingMission(): TrainingMissionProgress {
   };
 }
 
+export function failTrainingMission(
+  progress: TrainingMissionProgress,
+  message: string
+): TrainingMissionProgress {
+  return {
+    phase: 'failed',
+    nextRingIndex: progress.nextRingIndex,
+    message
+  };
+}
+
 export function updateTrainingMission(
   progress: TrainingMissionProgress,
   state: FlightState
 ): TrainingMissionProgress {
-  if (progress.phase === 'complete') {
+  if (progress.phase === 'complete' || progress.phase === 'failed') {
     return progress;
   }
 
@@ -68,7 +84,7 @@ export function updateTrainingMission(
         return {
           phase: 'landing',
           nextRingIndex: nextIndex,
-          message: '全リング通過。THRUSTを離して減速し、緑のゾーンへ着陸'
+          message: '全リング通過。速度・姿勢・降下率を抑えて緑のゾーンへ着陸'
         };
       }
 
@@ -87,8 +103,7 @@ export function updateTrainingMission(
     state.onGround &&
     state.position.x >= LANDING_ZONE.minX &&
     state.position.x <= LANDING_ZONE.maxX &&
-    Math.abs(state.position.z) <= LANDING_ZONE.halfWidth &&
-    state.speed <= 28
+    Math.abs(state.position.z) <= LANDING_ZONE.halfWidth
   ) {
     return {
       phase: 'complete',

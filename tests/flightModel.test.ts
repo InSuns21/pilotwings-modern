@@ -60,6 +60,34 @@ describe('arcade flight model', () => {
     expect(Math.abs(state.roll)).toBeLessThan(Math.abs(initialRoll));
   });
 
+  it('enters a recoverable stall at low airspeed', () => {
+    let state = {
+      ...createInitialFlightState(),
+      onGround: false,
+      speed: 11,
+      position: { x: 0, y: 30, z: 0 }
+    };
+
+    state = stepArcadeFlight(
+      state,
+      { pitch: 0.8, roll: 0.7, yaw: 0.5, throttle: 0 },
+      1 / 60
+    );
+
+    expect(state.stalled).toBe(true);
+    expect(state.verticalSpeed).toBeLessThan(0);
+
+    for (let i = 0; i < 180; i += 1) {
+      state = stepArcadeFlight(
+        state,
+        { pitch: -1, roll: 0, yaw: 0, throttle: 1 },
+        1 / 60
+      );
+    }
+
+    expect(state.stalled).toBe(false);
+  });
+
   it('yaw input changes heading smoothly without angular oscillation state', () => {
     let state = {
       ...createInitialFlightState(),
