@@ -7,7 +7,7 @@ import {
   TRAINING_RINGS,
   type TrainingMissionProgress
 } from '../game/TrainingMission';
-import { MOUNTAINS } from '../world/WorldGeometry';
+import { createTrainingIslandVisual, type TrainingIslandVisual } from './TrainingIslandVisual';
 
 interface CrashPiece {
   readonly mesh: THREE.Mesh;
@@ -21,6 +21,7 @@ export class SceneRenderer {
   readonly #camera = new THREE.PerspectiveCamera(62, 1, 0.1, 1600);
   readonly #aircraft: AircraftModel;
   readonly #resizeObserver: ResizeObserver;
+  #worldVisual: TrainingIslandVisual | null = null;
   readonly #ringMaterials: THREE.MeshStandardMaterial[] = [];
   readonly #landingMaterial = new THREE.MeshStandardMaterial({
     color: 0x61d174,
@@ -230,6 +231,8 @@ export class SceneRenderer {
 
   dispose(): void {
     this.#resizeObserver.disconnect();
+    this.#worldVisual?.dispose();
+    this.#worldVisual = null;
     this.#renderer.dispose();
     this.#renderer.domElement.remove();
   }
@@ -244,7 +247,9 @@ export class SceneRenderer {
   #buildWorld(selection: GameSelection): void {
     switch (selection.world.id) {
       case 'training-island':
-        this.#buildAirport();
+        this.#worldVisual = createTrainingIslandVisual();
+        this.#scene.add(this.#worldVisual.root);
+        this.#buildAirportOverlays();
         return;
     }
   }
@@ -290,73 +295,7 @@ export class SceneRenderer {
     });
   }
 
-  #buildAirport(): void {
-    const groundTexture = this.#createGroundTexture();
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(1400, 1000),
-      new THREE.MeshStandardMaterial({
-        map: groundTexture,
-        roughness: 1,
-        metalness: 0
-      })
-    );
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.set(130, -0.01, 0);
-    ground.receiveShadow = true;
-    this.#scene.add(ground);
-
-    const runwayMaterial = new THREE.MeshStandardMaterial({
-      color: 0x363b42,
-      roughness: 0.96
-    });
-    const runway = new THREE.Mesh(new THREE.PlaneGeometry(640, 24), runwayMaterial);
-    runway.rotation.x = -Math.PI / 2;
-    runway.position.set(100, 0.025, 0);
-    runway.receiveShadow = true;
-    this.#scene.add(runway);
-
-    const shoulderMaterial = new THREE.MeshStandardMaterial({
-      color: 0xd7d7d0,
-      roughness: 0.9
-    });
-
-    for (const z of [-12.8, 12.8]) {
-      const shoulder = new THREE.Mesh(
-        new THREE.PlaneGeometry(640, 1.2),
-        shoulderMaterial
-      );
-      shoulder.rotation.x = -Math.PI / 2;
-      shoulder.position.set(100, 0.035, z);
-      this.#scene.add(shoulder);
-    }
-
-    const markingMaterial = new THREE.MeshStandardMaterial({
-      color: 0xf5f1dc,
-      roughness: 0.8
-    });
-
-    for (let x = -190; x <= 390; x += 32) {
-      const dash = new THREE.Mesh(
-        new THREE.PlaneGeometry(14, 0.75),
-        markingMaterial
-      );
-      dash.rotation.x = -Math.PI / 2;
-      dash.position.set(x, 0.045, 0);
-      this.#scene.add(dash);
-    }
-
-    for (const x of [-205, 405]) {
-      for (const z of [-8, -4, 0, 4, 8]) {
-        const threshold = new THREE.Mesh(
-          new THREE.PlaneGeometry(8, 1.1),
-          markingMaterial
-        );
-        threshold.rotation.x = -Math.PI / 2;
-        threshold.position.set(x, 0.047, z);
-        this.#scene.add(threshold);
-      }
-    }
-
+  #buildAirportOverlays(): void {
     const landingZone = new THREE.Mesh(
       new THREE.PlaneGeometry(
         LANDING_ZONE.maxX - LANDING_ZONE.minX,
@@ -367,7 +306,7 @@ export class SceneRenderer {
     landingZone.rotation.x = -Math.PI / 2;
     landingZone.position.set(
       (LANDING_ZONE.minX + LANDING_ZONE.maxX) / 2,
-      0.052,
+      0.185,
       0
     );
     this.#scene.add(landingZone);
@@ -382,45 +321,8 @@ export class SceneRenderer {
       startPadMaterial
     );
     startPad.rotation.x = -Math.PI / 2;
-    startPad.position.set(-175, 0.051, 0);
+    startPad.position.set(-175, 0.182, 0);
     this.#scene.add(startPad);
-
-    this.#buildReferenceMarkers();
-  }
-
-  #buildReferenceMarkers(): void {
-    const markerMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      roughness: 0.75
-    });
-
-    for (let x = -160; x <= 360; x += 80) {
-      for (const z of [-42, 42]) {
-        const marker = new THREE.Mesh(
-          new THREE.BoxGeometry(2.5, 5, 2.5),
-          markerMaterial
-        );
-        marker.position.set(x, 2.5, z);
-        marker.castShadow = true;
-        this.#scene.add(marker);
-      }
-    }
-
-    const hillMaterial = new THREE.MeshStandardMaterial({
-      color: 0x587449,
-      roughness: 1
-    });
-
-    for (const mountain of MOUNTAINS) {
-      const hill = new THREE.Mesh(
-        new THREE.ConeGeometry(mountain.radius, mountain.height, 18),
-        hillMaterial
-      );
-      hill.position.set(mountain.x, mountain.height / 2, mountain.z);
-      hill.castShadow = true;
-      hill.receiveShadow = true;
-      this.#scene.add(hill);
-    }
   }
 
   #buildRings(): void {
@@ -445,43 +347,5 @@ export class SceneRenderer {
     }
   }
 
-  #createGroundTexture(): THREE.CanvasTexture {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
-    const context = canvas.getContext('2d');
 
-    if (!context) {
-      throw new Error('2D canvas context is unavailable');
-    }
-
-    const size = 32;
-    for (let y = 0; y < 8; y += 1) {
-      for (let x = 0; x < 8; x += 1) {
-        context.fillStyle = (x + y) % 2 === 0 ? '#527b45' : '#658a52';
-        context.fillRect(x * size, y * size, size, size);
-      }
-    }
-
-    context.strokeStyle = 'rgba(255,255,255,0.08)';
-    context.lineWidth = 2;
-    for (let i = 0; i <= 8; i += 1) {
-      context.beginPath();
-      context.moveTo(i * size, 0);
-      context.lineTo(i * size, 256);
-      context.stroke();
-      context.beginPath();
-      context.moveTo(0, i * size);
-      context.lineTo(256, i * size);
-      context.stroke();
-    }
-
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(24, 18);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = this.#renderer.capabilities.getMaxAnisotropy();
-    return texture;
-  }
 }
