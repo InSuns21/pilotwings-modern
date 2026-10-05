@@ -65,8 +65,8 @@ export function isInsideTrainingIsland(x: number, z: number): boolean {
     currentIndex < TRAINING_ISLAND_OUTLINE.length;
     previousIndex = currentIndex, currentIndex += 1
   ) {
-    const current = TRAINING_ISLAND_OUTLINE[currentIndex];
-    const previous = TRAINING_ISLAND_OUTLINE[previousIndex];
+    const current = TRAINING_ISLAND_OUTLINE[currentIndex]!;
+    const previous = TRAINING_ISLAND_OUTLINE[previousIndex]!;
 
     const crossesHorizontalRay =
       current.z > z !== previous.z > z &&
