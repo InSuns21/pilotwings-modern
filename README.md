@@ -1,73 +1,77 @@
 # Pilotwings Modern
 
-Browser-first 3D flight game built with TypeScript, Vite, Three.js, and Rapier WASM.
+TypeScript、Vite、Three.js、Rapier WASM で構築した、ブラウザ向け3Dフライトゲームです。
 
-The current playable loop is a short training mission:
+現在は短い訓練ミッションをプレイできます。
 
-1. start on the runway;
-2. accelerate and take off;
-3. fly through three rings in order;
-4. return to the runway and land inside the green landing zone.
+1. 滑走路からスタートする
+2. 加速して離陸する
+3. 3つのリングを順番に通過する
+4. 滑走路へ戻り、緑色の着陸ゾーン内に着陸する
 
-Unsafe flight is part of the game rather than being silently tolerated:
+危険な飛行状態は、単に見逃すのではなくゲーム上の失敗要素として扱います。
 
-- low-speed/high-angle stalls reduce control authority, force the nose down, and add strong sink;
-- roughly 50 km/h is now clearly inside the stall envelope rather than sitting on its edge;
-- stall recovery requires both regained speed and a lowered nose attitude;
-- excessive nose-up attitude produces a warning before or during the stall region;
-- mountain and ground impacts end the flight;
-- landing off the runway ends the flight;
-- excessive landing speed, bank, descent rate, or genuinely unsafe touchdown attitude ends the flight; moderate nose-up flare is explicitly allowed;
-- crashes freeze the flight and show a GAME OVER state with the failure reason.
+- 低速・高迎角の失速では操舵性が低下し、機首が下がり、降下が強くなる
+- 約50 km/hは失速境界ぎりぎりではなく、明確に失速域に入る
+- 失速からの回復には、十分な速度回復と機首下げが必要
+- 過度な機首上げ姿勢では、失速前後に警告を表示する
+- 山や地面への衝突で飛行終了
+- 滑走路外への着地で飛行終了
+- 着陸速度、バンク、降下率、危険な接地姿勢が限界を超えると飛行終了。ただし通常の機首上げフレアは許容する
+- 墜落時は飛行を停止し、失敗理由付きの GAME OVER を表示する
 
-## Development
+## 開発
 
 ```bash
 npm install
 npm run dev
 ```
 
-Desktop controls:
+PC操作:
 
-- `↑ / ↓`: pitch up / down
-- `A / D`: roll left / right
-- `Q / E`: yaw left / right
-- `Space`: thrust while held
-- `Shift`: airbrake in flight / wheel brake on the runway
-- `RESTART MISSION`: reset aircraft and mission progress
+- `↑ / ↓`: ピッチ上げ / 下げ
+- `A / D`: 左 / 右ロール
+- `Q / E`: 左 / 右ヨー
+- `Space`: 押している間 THRUST
+- `Shift`: 空中ではエアブレーキ、滑走路上ではホイールブレーキ
+- `RESTART MISSION`: 機体とミッション進行をリセット
 
-Tablet/touch controls:
+タブレット / タッチ操作:
 
-- left virtual stick: pitch / roll
-- `YAW ◀` / `YAW ▶`: yaw
-- `THRUST`: thrust while held
-- `BRAKE`: airbrake in flight / wheel brake after touchdown
-- multi-touch is supported
+- 左バーチャルスティック: ピッチ / ロール
+- `YAW ◀` / `YAW ▶`: ヨー
+- `THRUST`: 押している間推力を加える
+- `BRAKE`: 空中ではエアブレーキ、接地後はホイールブレーキ
+- マルチタッチ対応
 
-The flight model is intentionally arcade-stable, but it now separates aircraft attitude from actual flight path. `PITCH` is where the nose points; `PATH` is where the aircraft is actually moving vertically. This allows a real landing flare: the nose can be +8 to +14 degrees while PATH and vertical speed are still negative. With THRUST off and neutral controls, the trainer settles into a shallow glide near roughly 80 km/h instead of losing speed forever. BRAKE remains separate extra drag in flight and stronger wheel braking on the runway.
+飛行モデルは操作しやすいアーケード寄りですが、現在は機体姿勢と実際の飛行経路を分離しています。HUD の `PITCH` は機首の向き、`PATH` は実際の上下方向の飛行経路角です。これにより、`PITCH +8〜+14°` でも `PATH` と垂直速度がまだマイナスという、着陸時のフレアが成立します。
 
-THRUST remains intentionally binary (pressed / released). There is no staged throttle control in the current baseline.
+THRUSTを離して操作を中立にすると、速度を失い続けるのではなく、約80 km/h前後の浅い滑空へ自然に落ち着きます。BRAKEは通常の抗力とは別の追加減速として働き、接地後はより強いホイールブレーキになります。
 
-The aircraft uses an original low-poly trainer model rather than placeholder boxes: tapered fuselage and wings, canopy/pilot, tail surfaces, fixed landing gear, navigation lights, exhaust detail, a three-blade propeller, speed-linked propeller blur, and cast shadows.
+THRUSTは意図的にON/OFFの2値操作のままです。現在の基本仕様では段階式・アナログスロットルは採用していません。
 
-## Verification
+機体モデルは箱を組み合わせた仮モデルではなく、オリジナルのローポリ練習機です。先細りの胴体と主翼、キャノピーとパイロット、尾翼、固定脚、翼端灯、排気管、3枚プロペラ、速度連動のプロペラブラー、影表現を備えています。
+
+## 検証
 
 ```bash
 npm run check
 ```
 
-This runs type checking, Vitest, and a production build.
+型チェック、Vitest、本番ビルドをまとめて実行します。
 
-## Architecture
+## アーキテクチャ
 
-See:
+以下を参照してください。
 
 - `docs/ARCHITECTURE.md`
 - `docs/DEVELOPMENT_RULES.md`
 - `prompts/PROJECT_SYSTEM_PROMPT.md`
 
-## Deployment
+## デプロイ
 
-Pushes to `main` run CI and the GitHub Pages deployment workflow. The production build uses `/pilotwings-modern/` as the Vite base path.
+`main` へのpushで CI と GitHub Pages のデプロイワークフローが実行されます。本番ビルドの Vite base path は `/pilotwings-modern/` を維持します。
 
-Expected Pages URL: `https://insuns21.github.io/pilotwings-modern/`
+GitHub Pages:
+
+`https://insuns21.github.io/pilotwings-modern/`
