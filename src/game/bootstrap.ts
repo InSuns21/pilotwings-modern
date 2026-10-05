@@ -1,6 +1,7 @@
 import { advanceFixedStep } from '../core/fixedStep';
 import {
   RUNWAY_GROUND_Y,
+  flightPathDegrees,
   headingDegrees,
   pitchDegrees,
   type FlightState
@@ -39,6 +40,7 @@ export async function bootstrapGame(root: HTMLElement): Promise<void> {
           <span>ALT <b data-altitude>0</b> m</span>
           <span>HDG <b data-heading>000</b>°</span>
           <span>PITCH <b data-pitch>0</b>°</span>
+          <span>PATH <b data-flight-path>0</b>°</span>
           <span>V/S <b data-vertical-speed>0.0</b> m/s</span>
           <span>RING <b data-rings>0 / 3</b></span>
         </div>
@@ -134,6 +136,7 @@ export async function bootstrapGame(root: HTMLElement): Promise<void> {
   const altitudeElement = root.querySelector<HTMLElement>('[data-altitude]');
   const headingElement = root.querySelector<HTMLElement>('[data-heading]');
   const pitchElement = root.querySelector<HTMLElement>('[data-pitch]');
+  const flightPathElement = root.querySelector<HTMLElement>('[data-flight-path]');
   const verticalSpeedElement = root.querySelector<HTMLElement>('[data-vertical-speed]');
   const ringsElement = root.querySelector<HTMLElement>('[data-rings]');
   const phaseElement = root.querySelector<HTMLElement>('[data-phase]');
@@ -151,6 +154,7 @@ export async function bootstrapGame(root: HTMLElement): Promise<void> {
     !altitudeElement ||
     !headingElement ||
     !pitchElement ||
+    !flightPathElement ||
     !verticalSpeedElement ||
     !ringsElement ||
     !phaseElement ||
@@ -186,6 +190,7 @@ export async function bootstrapGame(root: HTMLElement): Promise<void> {
       .toString()
       .padStart(3, '0');
     pitchElement.textContent = Math.round(pitchDegrees(state)).toString();
+    flightPathElement.textContent = Math.round(flightPathDegrees(state)).toString();
     verticalSpeedElement.textContent = state.verticalSpeed.toFixed(1);
     ringsElement.textContent = `${progress.nextRingIndex} / ${TRAINING_RINGS.length}`;
     phaseElement.textContent = progress.phase.toUpperCase();
