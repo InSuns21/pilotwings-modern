@@ -1,103 +1,105 @@
-# Architecture
+# アーキテクチャ
 
-## Goal
+## 目的
 
-A browser-first 3D flying game inspired by the approachable mission-flight genre, implemented as an original project rather than a ROM/emulator or asset clone.
+親しみやすいミッション飛行ゲームに着想を得た、ブラウザ優先の3Dフライトゲームを構築します。ROM / エミュレータや既存ゲーム資産の複製ではなく、オリジナル作品として実装します。
 
-## Stack
+## 技術スタック
 
-- TypeScript: application, flight model, safety rules, and mission code.
-- Vite: local development and static production builds.
-- Three.js: rendering, camera, scene graph, procedural ground texture, airport, terrain, and crash visuals.
-- Rapier 3D (WASM): kinematic aircraft body/collider integration.
-- Vitest: deterministic tests for timing, controls, flight behavior, safety judgments, and mission progression.
-- GitHub Actions + GitHub Pages: CI and static deployment.
+- TypeScript: アプリケーション、飛行モデル、安全判定、ミッションコード
+- Vite: ローカル開発と静的な本番ビルド
+- Three.js: 描画、カメラ、シーングラフ、手続き生成地面テクスチャ、空港、地形、墜落演出
+- Rapier 3D (WASM): 機体のキネマティック剛体 / コライダー統合
+- Vitest: タイミング、操作、飛行挙動、安全判定、ミッション進行の決定論的テスト
+- GitHub Actions + GitHub Pages: CI と静的デプロイ
 
-## Runtime boundaries
+## 実行時の責務境界
 
 `src/core/`
-: Framework-independent timing and reusable engine primitives.
+: フレームワーク非依存のタイミング処理と再利用可能なエンジン基礎要素。
 
 `src/flight/`
-: Deterministic arcade flight state and control law. This is the source of truth for speed, heading, aircraft pitch, flight-path angle, roll, vertical speed, angle-of-attack behavior, stall state, takeoff, flare, and touchdown behavior.
+: 決定論的なアーケード飛行状態と制御則。速度、方位、機体ピッチ、飛行経路角、ロール、垂直速度、迎角挙動、失速状態、離陸、フレア、接地挙動の正本です。
 
 `src/input/`
-: Converts keyboard, touch, and future gamepad devices into normalized pilot commands.
+: keyboard、touch、将来の gamepad 入力を正規化済みパイロット操作へ変換します。
 
 `src/physics/`
-: Bridges authoritative flight state into Rapier kinematic bodies/colliders.
+: 権威ある飛行状態を Rapier のキネマティック剛体 / コライダーへ反映します。
 
 `src/world/`
-: Shared world geometry used by both rendering and collision/safety judgments. Terrain visuals and terrain collision must use the same source data.
+: 描画と衝突 / 安全判定の両方で共有するワールドジオメトリを持ちます。地形表示と地形衝突は同じソースデータを使わなければなりません。
 
 `src/render/`
-: Owns Three.js scene graph, level chase camera, airport/ground visuals, the dedicated procedural aircraft model, mission visualization, and crash effects.
+: Three.js のシーングラフ、水平維持チェイスカメラ、空港 / 地面表示、専用の手続き生成機体モデル、ミッション表示、墜落演出を担当します。
 
 `src/game/`
-: Owns mission progression, safety judgments, crash causes, and application orchestration.
+: ミッション進行、安全判定、墜落原因、アプリケーション全体のオーケストレーションを担当します。
 
-## Flight and safety rules
+## 飛行・安全判定ルール
 
-- Pitch and roll are bounded target attitudes and return toward level when input is released.
-- Yaw commands a bounded heading rate and does not use raw rigid-body torque.
-- Low airspeed or excessive pitch can enter a recoverable stall.
-- Stall reduces control authority, increases sink, and drives the nose down.
-- Excessive nose-up attitude is surfaced as a warning before or during the stall envelope.
-- Terrain collision is fatal.
-- Airborne ground contact outside the runway is fatal.
-- Touchdown is fatal when speed, bank, descent rate, excessive nose-up attitude, or relatively small nose-down attitude exceeds configured safe limits. Nose-up and nose-down landing limits are intentionally asymmetric so normal flare is accepted.
-- Stall entry and stall recovery use separate thresholds so a stall cannot flicker on/off around one speed.
-- Full stall produces strong sink and reduced control authority; it remains recoverable with nose-down attitude and restored speed.
-- Airborne speed is not reduced by a fixed coasting penalty. Longitudinal acceleration comes from binary thrust, gravity projected along the flight path, speed-squared parasite drag, stall drag, and optional airbrake drag.
-- Aircraft pitch and flight-path angle are distinct state variables. Pitch controls where the nose points; flight-path angle controls the actual vertical trajectory.
-- Neutral power-off flight keeps the nose near level while the flight path settles into a shallow negative glide angle. The drag model makes airspeed settle near the configured glide-trim speed rather than decaying into a stall.
-- The flight-path angle responds to pitch with a finite rate instead of snapping to it. This lag is intentional and is what permits a landing flare: positive pitch with a still-negative flight path.
-- Angle of attack is derived from `pitch - flightPathAngle` and participates in stall and induced-drag behavior.
-- Nose-up eventually bends the flight path upward and trades airspeed for altitude; nose-down bends it downward and trades altitude for airspeed.
-- `FlightInput.brake` is normalized to `[0, 1]`; in flight it increases drag, while on the runway it applies substantially stronger wheel braking.
-- A crash freezes simulation, marks the mission failed, reports the reason, and triggers a visual wreck/explosion effect.
-- Safety rules are deterministic and unit-tested.
+- ピッチとロールは上限付きの目標姿勢として扱い、入力を離すと安定側へ戻す
+- ヨーは上限付きの方位変化率として扱い、剛体へ生のトルクを加える方式には戻さない
+- 低速または過大な迎角では回復可能な失速へ入る
+- 失速中は操舵性を下げ、降下を強め、機首を下げる
+- 過度な機首上げ姿勢は、失速領域の前または最中に警告として表示する
+- 地形衝突は致命的とする
+- 空中から滑走路外へ接地した場合は致命的とする
+- 接地時に速度、バンク、降下率、過大な機首上げ、または比較的小さな機首下げ限界を超えた場合は致命的とする
+- 通常のフレアを許容するため、着陸時の nose-up と nose-down の許容角は意図的に非対称とする
+- 失速開始と失速回復には別のしきい値を使い、境界速度付近で状態が点滅しないようにする
+- 完全な失速では強い降下と操舵性低下を与えるが、機首下げと速度回復によって復帰可能にする
+- 空中速度へ一定の惰性減速を直接加えない。前後方向加速度は、2値THRUST、飛行経路方向の重力、速度二乗に比例する寄生抗力、失速抗力、任意のエアブレーキ抗力から求める
+- 機体ピッチと飛行経路角は別々の状態変数とする。ピッチは機首の向き、飛行経路角は実際の上下方向の軌道を表す
+- THRUST OFFかつ操作中立では、機首をほぼ水平に保ったまま飛行経路が浅い負の角度へ落ち着く。抗力モデルにより、速度は失速へ落ち続けるのではなく設定した滑空速度付近へ収束する
+- 飛行経路角はピッチへ瞬時に一致させず、有限速度で追従させる。この遅れにより、機首が上向きでも飛行経路がまだ下向きという着陸フレアを成立させる
+- 迎角は `pitch - flightPathAngle` から導出し、失速判定と誘導抗力へ反映する
+- 機首上げでは最終的に飛行経路を上向きへ曲げ、速度を高度へ交換する
+- 機首下げでは飛行経路を下向きへ曲げ、高度を速度へ交換する
+- `FlightInput.brake` は `[0, 1]` に正規化する。空中では抗力を増加させ、滑走路上ではより強いホイールブレーキとして働かせる
+- 墜落時はシミュレーションを停止し、ミッションを失敗状態へ移し、原因を表示し、視覚的な破損 / 爆発演出を行う
+- 安全判定は決定論的にし、単体テストで固定する
 
-## Aircraft visual rules
+## 機体表示ルール
 
-- The playable aircraft is built in `src/render/AircraftModel.ts`; do not rebuild aircraft geometry inside `SceneRenderer`.
-- The baseline style is a readable low-poly trainer aircraft, not placeholder box geometry.
-- Preserve a recognizable fuselage, tapered main wing, tailplane/fin, canopy, landing gear, propeller, and front/rear silhouette.
-- Propeller animation is visual-only and must not affect deterministic flight simulation.
-- Flight-state transforms remain authoritative; visual detail must not change control or safety thresholds.
-- Cast/receive shadows should remain enabled for the aircraft and runway environment.
-- Visual refinements should remain original/procedural unless properly licensed assets are introduced.
+- プレイ機体は `src/render/AircraftModel.ts` で構築する。機体ジオメトリを `SceneRenderer` 内へ戻さない
+- 基本スタイルは一目で読めるローポリ練習機とし、箱形プレースホルダーへ退化させない
+- 胴体、テーパー主翼、水平尾翼 / 垂直尾翼、キャノピー、着陸脚、プロペラ、前後から見たシルエットを維持する
+- プロペラアニメーションは視覚表現専用とし、決定論的な飛行シミュレーションへ影響させない
+- 飛行状態の変換を権威ある状態として扱い、見た目の詳細変更で操作性や安全しきい値を変えない
+- 機体と滑走路周辺では cast / receive shadow を有効に保つ
+- 適切なライセンスの外部アセットを明示的に導入しない限り、見た目の改善はオリジナル / 手続き生成を優先する
 
-## Camera rules
+## カメラルール
 
-- The default camera is a level chase camera.
-- Camera position follows aircraft heading, but does not inherit aircraft roll/pitch.
-- World up remains vertical.
-- The HUD exposes speed, altitude, heading, pitch, vertical speed, ring progress, warnings, and mission phase.
-- A center reticle provides a stable forward reference.
+- 既定カメラは水平維持チェイスカメラとする
+- カメラ位置は機体方位へ追従するが、機体のロール / ピッチは継承しない
+- ワールドの上方向は常に鉛直を維持する
+- HUDには速度、高度、方位、ピッチ、飛行経路角、垂直速度、リング進捗、警告、ミッションフェーズを表示する
+- 画面中央のレティクルを安定した前方基準として使う
 
-## World and mission rules
+## ワールド・ミッションルール
 
-- Ground uses a procedural repeated tile pattern.
-- The airport includes a runway, centerline/threshold markings, start pad, and visible landing zone.
-- Mountains are driven by shared `src/world` geometry so rendered terrain and collision judgment cannot drift apart.
-- The initial training mission is: take off -> pass three rings in order -> make a safe landing in the marked zone.
+- 地面は手続き生成の反復タイルパターンを使う
+- 空港には滑走路、センターライン / しきい値マーキング、スタートパッド、可視の着陸ゾーンを配置する
+- 山は共有された `src/world` のジオメトリデータから生成し、描画地形と衝突判定が食い違わないようにする
+- 初期訓練ミッションは「離陸 → 3つのリングを順番に通過 → 指定ゾーンへ安全着陸」とする
 
-## Simulation rules
+## シミュレーションルール
 
-- Simulation runs at a fixed 60 Hz step.
-- Render cadence is independent from simulation cadence.
-- Long browser stalls are clamped.
-- The arcade flight state is authoritative for aircraft transforms.
-- Rapier mirrors the flight state through a kinematic body.
-- Visual meshes and collision meshes remain separate concepts.
+- シミュレーションは 60 Hz 固定ステップで実行する
+- 描画頻度とシミュレーション頻度を分離する
+- ブラウザが長時間停止した場合の経過時間は上限を設けてクランプする
+- アーケード飛行状態を機体変換の正本とする
+- Rapier はキネマティック剛体を通して飛行状態をミラーする
+- 視覚メッシュと衝突メッシュは別概念として扱う
 
-## Future seams
+## 将来の拡張ポイント
 
-1. richer aerodynamic model while preserving controllability;
-2. more detailed collision geometry and crash states;
-3. landing/crash scoring;
-4. additional missions;
-5. gamepad support and touch-control refinement;
-6. GLTF aircraft/scenery assets;
-7. audio and persistence.
+1. 操作性を維持したまま空力モデルをより豊かにする
+2. 衝突ジオメトリと墜落状態を詳細化する
+3. 着陸 / 墜落スコアリングを追加する
+4. ミッションを追加する
+5. ゲームパッド対応とタッチ操作を改善する
+6. GLTF の機体 / 景観アセットを導入する
+7. オーディオと永続化を追加する

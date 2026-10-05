@@ -1,32 +1,32 @@
-# Development Rules
+# 開発ルール
 
-## Source-of-truth rules
+## 正本・基礎ルール
 
-1. `main` must build and pass tests.
-2. Do not put generated `dist/` files in Git.
-3. Physics uses a fixed timestep; do not call `world.step()` from an unconstrained render delta.
-4. Input is normalized before it reaches simulation code.
-5. Physics state is authoritative; Three.js mirrors it.
-6. Keep mission rules independent from rendering where practical.
-7. Prefer small deterministic functions for flight-model math and test them directly.
-8. Avoid hidden singletons. Ownership and lifecycle should be explicit.
-9. Dispose WebGL/event resources when adding scene transitions or hot-reloadable subsystems.
-10. Do not copy Nintendo code, ROM data, textures, music, level geometry, trademarks-as-branding, or ripped game assets into this repository.
+1. `main` は常にビルド可能かつテスト成功状態を維持する
+2. 生成物である `dist/` を Git へコミットしない
+3. 物理シミュレーションは固定タイムステップを使う。制約のない描画フレーム差分から `world.step()` を直接呼ばない
+4. 入力はシミュレーションコードへ渡す前に正規化する
+5. 飛行 / 物理状態を権威ある状態とし、Three.js はそれを表示側でミラーする
+6. 可能な範囲でミッションルールを描画処理から独立させる
+7. 飛行モデルの計算は、小さく決定論的な関数を優先し、直接単体テストする
+8. 暗黙的なシングルトンを避ける。所有者とライフサイクルを明示する
+9. シーン遷移やホットリロード可能なサブシステムを追加する場合は、WebGL / イベント関連リソースを適切に解放する
+10. Nintendo のコード、ROMデータ、テクスチャ、音楽、レベルジオメトリ、ブランド用途の商標表現、リッピング済みゲーム資産をこのリポジトリへコピーしない
 
-## Change workflow
+## 変更ワークフロー
 
-- Make one coherent change per branch/PR.
-- Add or update tests when simulation behavior changes.
-- Run `npm run check` before merge.
-- Update `docs/ARCHITECTURE.md` when a boundary or core dependency changes.
-- Record non-obvious implementation decisions in code comments or architecture docs; do not rely on chat history.
+- 1つの branch / PR では、1つのまとまりある変更を扱う
+- シミュレーション挙動を変更した場合はテストを追加または更新する
+- マージ前に `npm run check` を実行する
+- モジュール境界や中核依存関係を変更した場合は `docs/ARCHITECTURE.md` を更新する
+- 自明でない実装判断はコードコメントまたはアーキテクチャ文書へ残し、チャット履歴だけに依存しない
 
-## Definition of done
+## 完了条件
 
-A change is done when:
+変更は以下をすべて満たしたとき完了とします。
 
-- typecheck passes;
-- tests pass;
-- production build succeeds;
-- relevant docs are updated;
-- GitHub Pages still resolves assets under `/pilotwings-modern/`.
+- typecheck が成功する
+- テストが成功する
+- production build が成功する
+- 関連ドキュメントが更新されている
+- GitHub Pages 上で `/pilotwings-modern/` 配下のアセット解決が壊れていない
