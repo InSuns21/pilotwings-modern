@@ -170,7 +170,7 @@ export function stepArcadeFlight(
   let stalled = wasStalled || enteringStall;
 
   if (stalled) {
-    pitch = moveTowards(pitch, -11 * DEG, STALL_PITCH_DOWN_RATE * dt);
+    pitch = moveTowards(pitch, -20 * DEG, STALL_PITCH_DOWN_RATE * dt);
     roll = moveTowards(roll, 0, AIR_ROLL_RATE * 0.7 * dt);
     angleOfAttack = pitch - state.flightPathAngle;
   }
