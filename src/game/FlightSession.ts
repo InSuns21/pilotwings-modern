@@ -17,6 +17,7 @@ import {
   type FlightSafetyState
 } from './FlightSafety';
 import type { GameSelection } from './GameCatalog';
+import { getLandingGuide, type LandingGuideMetric } from './LandingGuide';
 import type { TrainingMissionProgress } from './TrainingMission';
 import { createTaskRuntime } from './TaskRuntime';
 
@@ -81,6 +82,22 @@ export async function createFlightSession(
       </div>
 
       <div class="camera-note" aria-hidden="true">CAMERA: LEVEL CHASE · FORWARD ↑</div>
+
+      <div class="landing-guide" data-landing-guide hidden>
+        <div class="landing-guide-head">
+          <strong>LANDING GUIDE</strong>
+          <b data-landing-guide-stage>APPROACH</b>
+        </div>
+        <div class="landing-guide-grid">
+          <div class="landing-guide-metric" data-landing-guide-speed>SPD --</div>
+          <div class="landing-guide-metric" data-landing-guide-pitch>PITCH --</div>
+          <div class="landing-guide-metric" data-landing-guide-path>PATH --</div>
+          <div class="landing-guide-metric" data-landing-guide-vs>V/S --</div>
+          <div class="landing-guide-metric" data-landing-guide-bank>BANK --</div>
+        </div>
+        <div class="landing-guide-advice" data-landing-guide-advice></div>
+        <div class="landing-guide-legend">PITCH=機首角 · PATH=実際の飛行角</div>
+      </div>
 
       <div class="game-over-panel" data-game-over hidden>
         <div class="game-over-card">
@@ -162,6 +179,14 @@ export async function createFlightSession(
   const messageElement = root.querySelector<HTMLElement>('[data-mission-message]');
   const gameOverPanel = root.querySelector<HTMLElement>('[data-game-over]');
   const crashMessageElement = root.querySelector<HTMLElement>('[data-crash-message]');
+  const landingGuideElement = root.querySelector<HTMLElement>('[data-landing-guide]');
+  const landingGuideStageElement = root.querySelector<HTMLElement>('[data-landing-guide-stage]');
+  const landingGuideAdviceElement = root.querySelector<HTMLElement>('[data-landing-guide-advice]');
+  const landingGuideSpeedElement = root.querySelector<HTMLElement>('[data-landing-guide-speed]');
+  const landingGuidePitchElement = root.querySelector<HTMLElement>('[data-landing-guide-pitch]');
+  const landingGuidePathElement = root.querySelector<HTMLElement>('[data-landing-guide-path]');
+  const landingGuideVsElement = root.querySelector<HTMLElement>('[data-landing-guide-vs]');
+  const landingGuideBankElement = root.querySelector<HTMLElement>('[data-landing-guide-bank]');
 
   if (
     !viewport ||
@@ -181,7 +206,15 @@ export async function createFlightSession(
     !warningElement ||
     !messageElement ||
     !gameOverPanel ||
-    !crashMessageElement
+    !crashMessageElement ||
+    !landingGuideElement ||
+    !landingGuideStageElement ||
+    !landingGuideAdviceElement ||
+    !landingGuideSpeedElement ||
+    !landingGuidePitchElement ||
+    !landingGuidePathElement ||
+    !landingGuideVsElement ||
+    !landingGuideBankElement
   ) {
     throw new Error('Game shell did not initialize');
   }
@@ -198,6 +231,15 @@ export async function createFlightSession(
   let disposed = false;
   let animationFrameId = 0;
   renderer.setMissionProgress(mission);
+
+  const renderLandingGuideMetric = (
+    element: HTMLElement,
+    label: string,
+    metric: LandingGuideMetric
+  ): void => {
+    element.textContent = `${label} ${metric.value} · 目安 ${metric.target}`;
+    element.dataset.status = metric.status;
+  };
 
   const updateHud = (
     state: FlightState,
@@ -223,6 +265,19 @@ export async function createFlightSession(
     warningElement.hidden = currentSafety.warning === null;
     warningElement.textContent = currentSafety.warning ?? '';
     warningElement.dataset.level = state.stalled ? 'stall' : 'warning';
+
+    const landingGuide = getLandingGuide(progress, state);
+    landingGuideElement.hidden = landingGuide === null;
+    if (landingGuide) {
+      landingGuideStageElement.textContent = landingGuide.stageLabel;
+      landingGuideStageElement.dataset.stage = landingGuide.stage;
+      landingGuideAdviceElement.textContent = landingGuide.advice;
+      renderLandingGuideMetric(landingGuideSpeedElement, 'SPD', landingGuide.metrics.speed);
+      renderLandingGuideMetric(landingGuidePitchElement, 'PITCH', landingGuide.metrics.pitch);
+      renderLandingGuideMetric(landingGuidePathElement, 'PATH', landingGuide.metrics.path);
+      renderLandingGuideMetric(landingGuideVsElement, 'V/S', landingGuide.metrics.verticalSpeed);
+      renderLandingGuideMetric(landingGuideBankElement, 'BANK', landingGuide.metrics.bank);
+    }
   };
 
   const restartMission = (): void => {

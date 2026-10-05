@@ -74,7 +74,7 @@ export function updateTrainingMission(
       return {
         phase: 'landing',
         nextRingIndex: TRAINING_RINGS.length,
-        message: '全リング通過。BRAKEで減速し、PATHをマイナスにして進入'
+        message: '全リング通過。LANDING GUIDEを見ながら進入。8 m以下でFLAREへ'
       };
     }
 
@@ -84,7 +84,7 @@ export function updateTrainingMission(
         return {
           phase: 'landing',
           nextRingIndex: nextIndex,
-          message: '進入後は降下を保ったまま機首を上げてフレア。PITCHがプラスでもPATHはマイナスでOK'
+          message: '全リング通過。LANDING GUIDEを見ながら進入。8 m以下でFLAREへ'
         };
       }
 
