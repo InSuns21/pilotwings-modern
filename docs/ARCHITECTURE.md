@@ -19,7 +19,7 @@ A browser-first 3D flying game inspired by the approachable mission-flight genre
 : Framework-independent timing and reusable engine primitives.
 
 `src/flight/`
-: Deterministic arcade flight state and control law. This is the source of truth for speed, heading, pitch, roll, vertical speed, stall state, takeoff, and touchdown behavior.
+: Deterministic arcade flight state and control law. This is the source of truth for speed, heading, aircraft pitch, flight-path angle, roll, vertical speed, angle-of-attack behavior, stall state, takeoff, flare, and touchdown behavior.
 
 `src/input/`
 : Converts keyboard, touch, and future gamepad devices into normalized pilot commands.
@@ -45,12 +45,15 @@ A browser-first 3D flying game inspired by the approachable mission-flight genre
 - Excessive nose-up attitude is surfaced as a warning before or during the stall envelope.
 - Terrain collision is fatal.
 - Airborne ground contact outside the runway is fatal.
-- Touchdown is fatal when speed, pitch/roll attitude, or descent rate exceeds configured safe limits.
+- Touchdown is fatal when speed, bank, descent rate, excessive nose-up attitude, or relatively small nose-down attitude exceeds configured safe limits. Nose-up and nose-down landing limits are intentionally asymmetric so normal flare is accepted.
 - Stall entry and stall recovery use separate thresholds so a stall cannot flicker on/off around one speed.
 - Full stall produces strong sink and reduced control authority; it remains recoverable with nose-down attitude and restored speed.
 - Airborne speed is not reduced by a fixed coasting penalty. Longitudinal acceleration comes from binary thrust, gravity projected along the flight path, speed-squared parasite drag, stall drag, and optional airbrake drag.
-- With no pitch input and THRUST off, pitch trims toward a shallow glide attitude. The chosen trim angle and drag coefficient make the aircraft naturally settle near the configured glide-trim speed rather than decaying into a stall.
-- Nose-up flight exchanges airspeed for altitude; nose-down flight exchanges altitude for airspeed.
+- Aircraft pitch and flight-path angle are distinct state variables. Pitch controls where the nose points; flight-path angle controls the actual vertical trajectory.
+- Neutral power-off flight keeps the nose near level while the flight path settles into a shallow negative glide angle. The drag model makes airspeed settle near the configured glide-trim speed rather than decaying into a stall.
+- The flight-path angle responds to pitch with a finite rate instead of snapping to it. This lag is intentional and is what permits a landing flare: positive pitch with a still-negative flight path.
+- Angle of attack is derived from `pitch - flightPathAngle` and participates in stall and induced-drag behavior.
+- Nose-up eventually bends the flight path upward and trades airspeed for altitude; nose-down bends it downward and trades altitude for airspeed.
 - `FlightInput.brake` is normalized to `[0, 1]`; in flight it increases drag, while on the runway it applies substantially stronger wheel braking.
 - A crash freezes simulation, marks the mission failed, reports the reason, and triggers a visual wreck/explosion effect.
 - Safety rules are deterministic and unit-tested.
