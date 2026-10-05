@@ -9,9 +9,12 @@ export interface WorldPoint3 {
   readonly z: number;
 }
 
-export interface MatsumotoTerrainTile {
+export interface MapTileCoordinate {
   readonly x: number;
   readonly y: number;
+}
+
+export interface MatsumotoTerrainTile extends MapTileCoordinate {
   readonly elevations: Float32Array;
 }
 
@@ -117,6 +120,31 @@ export function matsumotoWorldToGeographic(
   };
 }
 
+export function matsumotoWorldToTileFraction(
+  x: number,
+  z: number,
+  zoom: number
+): { readonly x: number; readonly y: number } {
+  const geographic = matsumotoWorldToGeographic(x, z);
+  return geographicToTileFraction(
+    geographic.latitude,
+    geographic.longitude,
+    zoom
+  );
+}
+
+export function matsumotoTileFractionToWorld(
+  x: number,
+  y: number,
+  zoom: number
+): { readonly x: number; readonly z: number } {
+  const geographic = tileFractionToGeographic(x, y, zoom);
+  return geographicToMatsumotoWorld(
+    geographic.latitude,
+    geographic.longitude
+  );
+}
+
 export function decodeDemRgb(
   red: number,
   green: number,
@@ -144,7 +172,7 @@ export async function loadMatsumotoTerrain(
   );
   const centerX = Math.floor(center.x);
   const centerY = Math.floor(center.y);
-  const coordinates: Array<{ readonly x: number; readonly y: number }> = [];
+  const coordinates: MapTileCoordinate[] = [];
 
   for (let offsetY = -tileRadius; offsetY <= tileRadius; offsetY += 1) {
     for (let offsetX = -tileRadius; offsetX <= tileRadius; offsetX += 1) {
@@ -239,7 +267,7 @@ export function matsumotoTerrainVertexAt(
 }
 
 export function matsumotoPhotoTileUrl(
-  tile: Pick<MatsumotoTerrainTile, 'x' | 'y'>,
+  tile: MapTileCoordinate,
   zoom = MATSUMOTO_TERRAIN_ZOOM
 ): string {
   return `https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/${zoom}/${tile.x}/${tile.y}.jpg`;
