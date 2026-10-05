@@ -25,12 +25,14 @@ export class AircraftModel {
     const body = new THREE.MeshStandardMaterial({
       color: BODY_COLOR,
       roughness: 0.55,
-      metalness: 0.04
+      metalness: 0.04,
+      side: THREE.DoubleSide
     });
     const accent = new THREE.MeshStandardMaterial({
       color: ACCENT_COLOR,
       roughness: 0.48,
-      metalness: 0.03
+      metalness: 0.03,
+      side: THREE.DoubleSide
     });
     const dark = new THREE.MeshStandardMaterial({
       color: DARK_COLOR,
@@ -234,12 +236,12 @@ export class AircraftModel {
         new THREE.CylinderGeometry(0.045, 0.055, 0.82, 8),
         metal
       );
-      strut.position.set(-0.18, -0.52, side * 0.82);
+      strut.position.set(-0.18, -0.3, side * 0.82);
       strut.rotation.x = side * 0.12;
       this.root.add(strut);
 
       const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.085, 8, 14), tire);
-      wheel.position.set(-0.18, -0.87, side * 1.02);
+      wheel.position.set(-0.18, -0.55, side * 1.02);
       this.root.add(wheel);
 
       const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.12, 8), metal);
@@ -252,14 +254,14 @@ export class AircraftModel {
       new THREE.CylinderGeometry(0.035, 0.045, 0.64, 8),
       metal
     );
-    noseStrut.position.set(1.72, -0.48, 0);
+    noseStrut.position.set(1.72, -0.3, 0);
     this.root.add(noseStrut);
 
     const noseWheel = new THREE.Mesh(
       new THREE.TorusGeometry(0.19, 0.065, 8, 14),
       tire
     );
-    noseWheel.position.set(1.72, -0.77, 0);
+    noseWheel.position.set(1.72, -0.55, 0);
     this.root.add(noseWheel);
   }
 
