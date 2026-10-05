@@ -1,12 +1,21 @@
-# Agent Instructions
+# エージェント作業指示
 
-Read `prompts/PROJECT_SYSTEM_PROMPT.md` before making architectural or multi-file changes.
+アーキテクチャ変更や複数ファイルにまたがる変更を行う前に、必ず `prompts/PROJECT_SYSTEM_PROMPT.md` を読んでください。
 
-Minimum verification for code changes:
+コード変更時の最低限の検証:
 
 ```bash
 npm install
 npm run check
 ```
 
-Preserve the module boundaries in `docs/ARCHITECTURE.md`. Treat browser performance, deterministic simulation, and deployability to GitHub Pages as first-class constraints.
+`docs/ARCHITECTURE.md` に定義されたモジュール境界を維持してください。
+
+以下は第一級の制約として扱います。
+
+- ブラウザ上で十分な性能を維持する
+- シミュレーションの決定論性を維持する
+- GitHub Pages へ静的デプロイ可能な状態を維持する
+- タブレット / タッチ操作を壊さない
+- 既存の飛行モデル、安全判定、ミッション進行を変更する場合は関連テストを更新する
+- プロジェクト固有の設計判断は `prompts/PROJECT_SYSTEM_PROMPT.md` を優先する
