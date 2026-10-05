@@ -8,9 +8,10 @@ const DEG = Math.PI / 180;
 
 export const SAFE_LANDING_MAX_SPEED = 28;
 export const SAFE_LANDING_MAX_DESCENT = 6;
-export const SAFE_LANDING_MAX_PITCH = 11 * DEG;
+export const SAFE_LANDING_MAX_NOSE_UP_PITCH = 16 * DEG;
+export const SAFE_LANDING_MAX_NOSE_DOWN_PITCH = -6 * DEG;
 export const SAFE_LANDING_MAX_ROLL = 14 * DEG;
-export const NOSE_HIGH_WARNING_PITCH = 22 * DEG;
+export const NOSE_HIGH_WARNING_PITCH = 24 * DEG;
 export const AIRCRAFT_TERRAIN_CLEARANCE = 0.65;
 
 export type CrashReason =
@@ -42,19 +43,13 @@ export function evaluateFlightSafety(
     terrainHeight > 0 &&
     current.position.y <= terrainHeight + AIRCRAFT_TERRAIN_CLEARANCE
   ) {
-    return crash(
-      'terrain',
-      'TERRAIN IMPACT — 山腹に衝突'
-    );
+    return crash('terrain', 'TERRAIN IMPACT — 山腹に衝突');
   }
 
   const touchedDown = !previous.onGround && current.onGround;
   if (touchedDown) {
     if (!isOnRunway(current.position.x, current.position.z)) {
-      return crash(
-        'ground',
-        'GROUND IMPACT — 滑走路外に接地'
-      );
+      return crash('ground', 'GROUND IMPACT — 滑走路外に接地');
     }
 
     if (current.speed > SAFE_LANDING_MAX_SPEED) {
@@ -65,7 +60,8 @@ export function evaluateFlightSafety(
     }
 
     if (
-      Math.abs(previous.pitch) > SAFE_LANDING_MAX_PITCH ||
+      previous.pitch > SAFE_LANDING_MAX_NOSE_UP_PITCH ||
+      previous.pitch < SAFE_LANDING_MAX_NOSE_DOWN_PITCH ||
       Math.abs(previous.roll) > SAFE_LANDING_MAX_ROLL
     ) {
       return crash(
