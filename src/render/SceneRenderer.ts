@@ -17,13 +17,19 @@ interface CrashPiece {
   readonly spin: THREE.Vector3;
 }
 
+interface WorldVisual {
+  readonly root: THREE.Group;
+  update?(x: number, z: number): void;
+  dispose(): void;
+}
+
 export class SceneRenderer {
   readonly #renderer: THREE.WebGLRenderer;
   readonly #scene = new THREE.Scene();
   readonly #camera = new THREE.PerspectiveCamera(62, 1, 0.1, 1600);
   readonly #aircraft: AircraftModel;
   readonly #resizeObserver: ResizeObserver;
-  #worldVisual: { readonly root: THREE.Group; dispose(): void } | null = null;
+  #worldVisual: WorldVisual | null = null;
   readonly #ringMaterials: THREE.MeshStandardMaterial[] = [];
   readonly #landingMaterial = new THREE.MeshStandardMaterial({
     color: 0x61d174,
@@ -95,9 +101,19 @@ export class SceneRenderer {
   syncAircraft(state: FlightState): void {
     const rotation = flightOrientation(state);
 
-    this.#aircraft.root.position.set(state.position.x, state.position.y, state.position.z);
-    this.#aircraft.root.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+    this.#aircraft.root.position.set(
+      state.position.x,
+      state.position.y,
+      state.position.z
+    );
+    this.#aircraft.root.quaternion.set(
+      rotation.x,
+      rotation.y,
+      rotation.z,
+      rotation.w
+    );
     this.#aircraft.updateVisuals(state.speed);
+    this.#worldVisual?.update?.(state.position.x, state.position.z);
 
     const forward = new THREE.Vector3(
       Math.cos(state.heading),
@@ -137,7 +153,10 @@ export class SceneRenderer {
         material.color.setHex(0x64db74);
         material.emissive.setHex(0x123d18);
         material.opacity = 0.32;
-      } else if (progress.phase === 'rings' && index === progress.nextRingIndex) {
+      } else if (
+        progress.phase === 'rings' &&
+        index === progress.nextRingIndex
+      ) {
         material.color.setHex(0xffd34f);
         material.emissive.setHex(0x5a3d00);
         material.opacity = 1;
@@ -149,7 +168,9 @@ export class SceneRenderer {
     });
 
     this.#landingMaterial.opacity =
-      progress.phase === 'landing' || progress.phase === 'complete' ? 0.72 : 0.28;
+      progress.phase === 'landing' || progress.phase === 'complete'
+        ? 0.72
+        : 0.28;
   }
 
   triggerCrash(): void {
@@ -168,7 +189,10 @@ export class SceneRenderer {
       transparent: true,
       opacity: 0.95
     });
-    const flash = new THREE.Mesh(new THREE.SphereGeometry(1.8, 16, 12), flashMaterial);
+    const flash = new THREE.Mesh(
+      new THREE.SphereGeometry(1.8, 16, 12),
+      flashMaterial
+    );
     flash.name = 'crash-flash';
     this.#crashEffect.add(flash);
 
@@ -184,7 +208,11 @@ export class SceneRenderer {
         new THREE.SphereGeometry(0.8 + i * 0.11, 10, 8),
         smokeMaterial.clone()
       );
-      smoke.position.set((i % 2 === 0 ? 1 : -1) * i * 0.18, i * 0.25, (i - 3) * 0.13);
+      smoke.position.set(
+        (i % 2 === 0 ? 1 : -1) * i * 0.18,
+        i * 0.25,
+        (i - 3) * 0.13
+      );
       this.#crashEffect.add(smoke);
       this.#crashSmoke.push(smoke);
     }
@@ -209,7 +237,11 @@ export class SceneRenderer {
           5.5 + (i % 4) * 1.2,
           Math.sin(angle) * (5 + (i % 2) * 1.8)
         ),
-        spin: new THREE.Vector3(2 + i * 0.21, 3 + i * 0.17, 2.4 + i * 0.13)
+        spin: new THREE.Vector3(
+          2 + i * 0.21,
+          3 + i * 0.17,
+          2.4 + i * 0.13
+        )
       });
     }
   }
@@ -254,7 +286,10 @@ export class SceneRenderer {
     }
   }
 
-  #buildWorld(selection: GameSelection, worldRuntime: WorldRuntime): void {
+  #buildWorld(
+    selection: GameSelection,
+    worldRuntime: WorldRuntime
+  ): void {
     switch (selection.world.id) {
       case 'training-island':
         this.#worldVisual = createTrainingIslandVisual();
@@ -266,7 +301,9 @@ export class SceneRenderer {
         if (worldRuntime.id !== 'matsumoto-real') {
           throw new Error('Matsumoto world runtime did not initialize');
         }
-        this.#worldVisual = createMatsumotoWorldVisual(worldRuntime);
+        this.#worldVisual = createMatsumotoWorldVisual(worldRuntime, {
+          maxAnisotropy: this.#renderer.capabilities.getMaxAnisotropy()
+        });
         this.#scene.add(this.#worldVisual.root);
         this.#buildAirportOverlays();
         return;
@@ -286,7 +323,10 @@ export class SceneRenderer {
       return;
     }
 
-    const elapsed = Math.min((performance.now() - this.#crashStartedAt) / 1000, 4);
+    const elapsed = Math.min(
+      (performance.now() - this.#crashStartedAt) / 1000,
+      4
+    );
     const dt = 1 / 60;
 
     const flash = this.#crashEffect.getObjectByName('crash-flash') as
@@ -365,6 +405,4 @@ export class SceneRenderer {
       this.#scene.add(mesh);
     }
   }
-
-
 }
