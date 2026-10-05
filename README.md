@@ -1,6 +1,13 @@
 # Pilotwings Modern
 
-Browser-first 3D flight game scaffold built with TypeScript, Vite, Three.js, and Rapier WASM.
+Browser-first 3D flight game built with TypeScript, Vite, Three.js, and Rapier WASM.
+
+The current playable loop is a short training mission:
+
+1. start on the runway;
+2. accelerate and take off;
+3. fly through three rings in order;
+4. return to the runway and land inside the green landing zone.
 
 ## Development
 
@@ -9,22 +16,22 @@ npm install
 npm run dev
 ```
 
-Open the local Vite URL.
-
 Desktop controls:
 
-- `↑ / ↓`: pitch
-- `A / D`: roll
-- `Q / E`: yaw
-- `Space`: thrust
-- `RESET`: restore the aircraft pose
+- `↑ / ↓`: pitch up / down
+- `A / D`: roll left / right
+- `Q / E`: yaw left / right
+- `Space`: thrust while held
+- `RESTART MISSION`: reset aircraft and mission progress
 
 Tablet/touch controls:
 
 - left virtual stick: pitch / roll
 - `YAW ◀` / `YAW ▶`: yaw
 - `THRUST`: thrust while held
-- multi-touch is supported, so stick + thrust + yaw can be used together
+- multi-touch is supported
+
+The flight model is intentionally arcade-stable: releasing pitch/roll returns the aircraft toward level flight, and yaw commands a bounded turn rate rather than applying raw rigid-body torque.
 
 ## Verification
 

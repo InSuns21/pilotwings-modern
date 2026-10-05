@@ -69,10 +69,10 @@ export class TouchInput {
   sample(): FlightInput {
     return {
       pitch: -this.#stickVector.y,
-      roll: -this.#stickVector.x,
+      roll: this.#stickVector.x,
       yaw:
-        (this.#yawLeftPointers.size > 0 ? 1 : 0) -
-        (this.#yawRightPointers.size > 0 ? 1 : 0),
+        (this.#yawRightPointers.size > 0 ? 1 : 0) -
+        (this.#yawLeftPointers.size > 0 ? 1 : 0),
       throttle: this.#thrustPointers.size > 0 ? 1 : 0
     };
   }
