@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MAX_DIVE_SPEED,
+  OVERSPEED_WARNING_SPEED,
   RUNWAY_GROUND_Y,
   createInitialFlightState
 } from '../src/flight/ArcadeFlightModel';
@@ -22,6 +24,34 @@ describe('flight safety', () => {
 
     expect(safety.warning).toContain('STALL');
     expect(safety.crashReason).toBeNull();
+  });
+
+  it('warns before the maximum dive speed is reached', () => {
+    const state = {
+      ...createInitialFlightState(),
+      onGround: false,
+      position: { x: 0, y: 200, z: 0 },
+      speed: OVERSPEED_WARNING_SPEED + 0.5
+    };
+
+    const safety = evaluateFlightSafety(state, state);
+
+    expect(safety.warning).toContain('OVERSPEED');
+    expect(safety.crashReason).toBeNull();
+  });
+
+  it('terminates the flight after exceeding the maximum dive speed', () => {
+    const state = {
+      ...createInitialFlightState(),
+      onGround: false,
+      position: { x: 0, y: 200, z: 0 },
+      speed: MAX_DIVE_SPEED + 0.1
+    };
+
+    const safety = evaluateFlightSafety(state, state);
+
+    expect(safety.crashReason).toBe('overspeed');
+    expect(safety.crashMessage).toContain('OVERSPEED');
   });
 
   it('rejects a high-speed landing', () => {
