@@ -2,7 +2,11 @@ import {
   RUNWAY_GROUND_Y,
   type FlightState
 } from '../flight/ArcadeFlightModel';
-import { isOnRunway, terrainHeightAt } from '../world/WorldGeometry';
+import {
+  isInsideTrainingIsland,
+  isOnRunway,
+  terrainHeightAt
+} from '../world/WorldGeometry';
 
 const DEG = Math.PI / 180;
 
@@ -17,6 +21,7 @@ export const AIRCRAFT_TERRAIN_CLEARANCE = 0.65;
 export type CrashReason =
   | 'terrain'
   | 'ground'
+  | 'water'
   | 'landing-speed'
   | 'landing-attitude'
   | 'hard-landing';
@@ -49,7 +54,9 @@ export function evaluateFlightSafety(
   const touchedDown = !previous.onGround && current.onGround;
   if (touchedDown) {
     if (!isOnRunway(current.position.x, current.position.z)) {
-      return crash('ground', 'GROUND IMPACT — 滑走路外に接地');
+      return isInsideTrainingIsland(current.position.x, current.position.z)
+        ? crash('ground', 'GROUND IMPACT — 滑走路外に接地')
+        : crash('water', 'WATER IMPACT — 海面に墜落');
     }
 
     if (current.speed > SAFE_LANDING_MAX_SPEED) {
@@ -83,7 +90,9 @@ export function evaluateFlightSafety(
     current.position.y <= RUNWAY_GROUND_Y &&
     !isOnRunway(current.position.x, current.position.z)
   ) {
-    return crash('ground', 'GROUND IMPACT — 地面に衝突');
+    return isInsideTrainingIsland(current.position.x, current.position.z)
+      ? crash('ground', 'GROUND IMPACT — 地面に衝突')
+      : crash('water', 'WATER IMPACT — 海面に墜落');
   }
 
   if (current.stalled) {
