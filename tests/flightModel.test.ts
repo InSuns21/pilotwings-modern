@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  GLIDE_TRIM_SPEED,
   RUNWAY_GROUND_Y,
   STALL_RECOVERY_SPEED,
   STALL_SPEED,
@@ -50,7 +51,7 @@ describe('arcade flight model', () => {
       ...createInitialFlightState(),
       onGround: false,
       speed: 30,
-      position: { x: 0, y: 20, z: 0 },
+      position: { x: 0, y: 200, z: 0 },
       roll: 0.5
     };
 
@@ -62,6 +63,71 @@ describe('arcade flight model', () => {
     expect(Math.abs(state.roll)).toBeLessThan(Math.abs(initialRoll));
   });
 
+  it('glides toward a stable speed instead of decaying endlessly with thrust off', () => {
+    let state = {
+      ...createInitialFlightState(),
+      onGround: false,
+      speed: 30,
+      position: { x: 0, y: 200, z: 0 }
+    };
+
+    const initialAltitude = state.position.y;
+
+    for (let i = 0; i < 30 * 60; i += 1) {
+      state = stepArcadeFlight(state, neutral, 1 / 60);
+    }
+
+    expect(state.stalled).toBe(false);
+    expect(state.speed).toBeGreaterThan(GLIDE_TRIM_SPEED - 2);
+    expect(state.speed).toBeLessThan(GLIDE_TRIM_SPEED + 2);
+    expect(state.position.y).toBeLessThan(initialAltitude);
+  });
+
+  it('trades altitude for airspeed when the nose is lowered', () => {
+    let state = {
+      ...createInitialFlightState(),
+      onGround: false,
+      speed: GLIDE_TRIM_SPEED,
+      position: { x: 0, y: 200, z: 0 }
+    };
+
+    const initialAltitude = state.position.y;
+
+    for (let i = 0; i < 3 * 60; i += 1) {
+      state = stepArcadeFlight(
+        state,
+        { ...neutral, pitch: -0.5 },
+        1 / 60
+      );
+    }
+
+    expect(state.speed).toBeGreaterThan(GLIDE_TRIM_SPEED + 2);
+    expect(state.position.y).toBeLessThan(initialAltitude);
+  });
+
+  it('trades airspeed for altitude when the nose is raised', () => {
+    let state = {
+      ...createInitialFlightState(),
+      onGround: false,
+      speed: 25,
+      position: { x: 0, y: 200, z: 0 }
+    };
+
+    const initialSpeed = state.speed;
+    const initialAltitude = state.position.y;
+
+    for (let i = 0; i < 60; i += 1) {
+      state = stepArcadeFlight(
+        state,
+        { ...neutral, pitch: 0.5 },
+        1 / 60
+      );
+    }
+
+    expect(state.speed).toBeLessThan(initialSpeed);
+    expect(state.position.y).toBeGreaterThan(initialAltitude);
+  });
+
   it('treats 50 km/h as a clear stall instead of the edge of the envelope', () => {
     const fiftyKph = 50 / 3.6;
     expect(fiftyKph).toBeLessThan(STALL_SPEED);
@@ -70,7 +136,7 @@ describe('arcade flight model', () => {
       ...createInitialFlightState(),
       onGround: false,
       speed: fiftyKph,
-      position: { x: 0, y: 30, z: 0 }
+      position: { x: 0, y: 60, z: 0 }
     };
 
     const next = stepArcadeFlight(state, neutral, 1 / 60);
@@ -86,7 +152,7 @@ describe('arcade flight model', () => {
       stalled: true,
       speed: STALL_SPEED - 1,
       pitch: 0.2,
-      position: { x: 0, y: 80, z: 0 }
+      position: { x: 0, y: 120, z: 0 }
     };
 
     state = stepArcadeFlight(
@@ -96,7 +162,7 @@ describe('arcade flight model', () => {
     );
     expect(state.stalled).toBe(true);
 
-    for (let i = 0; i < 180; i += 1) {
+    for (let i = 0; i < 10 * 60; i += 1) {
       state = stepArcadeFlight(
         state,
         { pitch: -1, roll: 0, yaw: 0, throttle: 1, brake: 0 },
@@ -111,22 +177,23 @@ describe('arcade flight model', () => {
     expect(state.stalled).toBe(false);
   });
 
-  it('airbrake decelerates much faster than coasting', () => {
+  it('airbrake decelerates much faster than normal glide', () => {
     const state = {
       ...createInitialFlightState(),
       onGround: false,
       speed: 30,
-      position: { x: 0, y: 40, z: 0 }
+      position: { x: 0, y: 100, z: 0 }
     };
 
-    const coasting = stepArcadeFlight(state, neutral, 1);
-    const braking = stepArcadeFlight(
-      state,
-      { ...neutral, brake: 1 },
-      1
-    );
+    let gliding = state;
+    let braking = state;
 
-    expect(braking.speed).toBeLessThan(coasting.speed);
+    for (let i = 0; i < 60; i += 1) {
+      gliding = stepArcadeFlight(gliding, neutral, 1 / 60);
+      braking = stepArcadeFlight(braking, { ...neutral, brake: 1 }, 1 / 60);
+    }
+
+    expect(braking.speed).toBeLessThan(gliding.speed - 4);
   });
 
   it('ground brake can stop the aircraft quickly after touchdown', () => {
@@ -151,7 +218,7 @@ describe('arcade flight model', () => {
       ...createInitialFlightState(),
       onGround: false,
       speed: 30,
-      position: { x: 0, y: 20, z: 0 }
+      position: { x: 0, y: 100, z: 0 }
     };
 
     const headings: number[] = [];
