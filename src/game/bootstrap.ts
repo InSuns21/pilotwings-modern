@@ -50,10 +50,10 @@ export async function bootstrapGame(root: HTMLElement): Promise<void> {
         </div>
 
         <span class="keyboard-help">
-          ↑↓ pitch · A/D roll · Q/E yaw · Space thrust
+          ↑↓ pitch · A/D roll · Q/E yaw · Space thrust · Shift brake
         </span>
         <span class="touch-help">
-          左スティック: pitch / roll · 右: yaw / thrust
+          左スティック: pitch / roll · 右: yaw / thrust / brake
         </span>
 
         <button type="button" data-reset>RESTART MISSION</button>
@@ -112,6 +112,14 @@ export async function bootstrapGame(root: HTMLElement): Promise<void> {
             aria-label="Thrust"
           >
             THRUST
+          </button>
+          <button
+            class="touch-control-button touch-brake"
+            type="button"
+            data-touch-brake
+            aria-label="Airbrake and wheel brake"
+          >
+            BRAKE
           </button>
         </div>
       </div>
