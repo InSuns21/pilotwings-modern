@@ -61,6 +61,7 @@ const GROUND_BRAKE_DECELERATION = 18;
 const GROUND_COAST_DECELERATION = 5.5;
 const STALL_EXTRA_DRAG = 1.2;
 const ANGLE_OF_ATTACK_DRAG = 2.6;
+const DIVE_ENERGY_GAIN = 1;
 const PARASITE_DRAG_COEFFICIENT =
   (GRAVITY * Math.sin(GLIDE_TRIM_ANGLE_OF_ATTACK)) /
   (GLIDE_TRIM_SPEED * GLIDE_TRIM_SPEED);
@@ -192,13 +193,22 @@ export function stepArcadeFlight(
   angleOfAttack = pitch - flightPathAngle;
 
   const gravityAlongFlightPath = -GRAVITY * Math.sin(flightPathAngle);
+  const glideGravityAcceleration = GRAVITY * Math.sin(GLIDE_TRIM_ANGLE_OF_ATTACK);
+  // Preserve the neutral glide trim, but make intentional non-stalled descents
+  // return altitude to airspeed strongly enough to be legible in arcade play.
+  const diveEnergyRecovery =
+    !stalled && flightPathAngle < -GLIDE_TRIM_ANGLE_OF_ATTACK
+      ? DIVE_ENERGY_GAIN *
+        Math.max(0, gravityAlongFlightPath - glideGravityAcceleration)
+      : 0;
   const parasiteDrag = PARASITE_DRAG_COEFFICIENT * state.speed * state.speed;
   const inducedDrag =
     ANGLE_OF_ATTACK_DRAG * angleOfAttack * angleOfAttack;
   const stallDrag = stalled ? STALL_EXTRA_DRAG : 0;
   const acceleration =
     throttle * THRUST_ACCELERATION +
-    gravityAlongFlightPath -
+    gravityAlongFlightPath +
+    diveEnergyRecovery -
     parasiteDrag -
     inducedDrag -
     brake * AIRBRAKE_DECELERATION -
