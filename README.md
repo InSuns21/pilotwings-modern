@@ -9,10 +9,12 @@ The current playable loop is a short training mission:
 3. fly through three rings in order;
 4. return to the runway and land inside the green landing zone.
 
-Unsafe flight is now part of the game rather than being silently tolerated:
+Unsafe flight is part of the game rather than being silently tolerated:
 
-- low-speed/high-angle stalls reduce control authority and force the nose down;
-- excessive nose-up attitude produces a warning before the stall region;
+- low-speed/high-angle stalls reduce control authority, force the nose down, and add strong sink;
+- roughly 50 km/h is now clearly inside the stall envelope rather than sitting on its edge;
+- stall recovery requires both regained speed and a lowered nose attitude;
+- excessive nose-up attitude produces a warning before or during the stall region;
 - mountain and ground impacts end the flight;
 - landing off the runway ends the flight;
 - excessive landing speed, pitch/roll attitude, or descent rate ends the flight;
@@ -31,6 +33,7 @@ Desktop controls:
 - `A / D`: roll left / right
 - `Q / E`: yaw left / right
 - `Space`: thrust while held
+- `Shift`: airbrake in flight / wheel brake on the runway
 - `RESTART MISSION`: reset aircraft and mission progress
 
 Tablet/touch controls:
@@ -38,9 +41,10 @@ Tablet/touch controls:
 - left virtual stick: pitch / roll
 - `YAW ◀` / `YAW ▶`: yaw
 - `THRUST`: thrust while held
+- `BRAKE`: airbrake in flight / wheel brake after touchdown
 - multi-touch is supported
 
-The flight model is intentionally arcade-stable, but it still requires safe energy and landing management.
+The flight model is intentionally arcade-stable, but it still requires safe energy and landing management. Releasing thrust produces normal drag; holding BRAKE provides much stronger deceleration for approach and rollout.
 
 The aircraft uses an original low-poly trainer model rather than placeholder boxes: tapered fuselage and wings, canopy/pilot, tail surfaces, fixed landing gear, navigation lights, exhaust detail, a three-blade propeller, speed-linked propeller blur, and cast shadows.
 

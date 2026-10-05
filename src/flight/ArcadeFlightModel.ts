@@ -27,18 +27,23 @@ export interface FlightState {
 export const RUNWAY_GROUND_Y = 0.85;
 export const TAKEOFF_SPEED = 18;
 export const MAX_SPEED = 52;
-export const STALL_SPEED = 13.5;
-export const STALL_PITCH = 25 * (Math.PI / 180);
+export const STALL_SPEED = 16;
+export const STALL_RECOVERY_SPEED = 18;
+export const STALL_PITCH = 22 * (Math.PI / 180);
 
 const DEG = Math.PI / 180;
 const MAX_PITCH = 30 * DEG;
 const MAX_ROLL = 38 * DEG;
 const AIR_PITCH_RATE = 48 * DEG;
-const STALL_PITCH_DOWN_RATE = 62 * DEG;
+const STALL_PITCH_DOWN_RATE = 68 * DEG;
 const AIR_ROLL_RATE = 78 * DEG;
 const GROUND_YAW_RATE = 24 * DEG;
 const DIRECT_YAW_RATE = 28 * DEG;
 const BANK_TURN_RATE = 52 * DEG;
+const STALL_RECOVERY_PITCH = 12 * DEG;
+const HIGH_PITCH_STALL_MAX_SPEED = 30;
+const AIRBRAKE_DECELERATION = 8.5;
+const GROUND_BRAKE_DECELERATION = 18;
 
 export function createInitialFlightState(): FlightState {
   return {
@@ -60,11 +65,17 @@ export function stepArcadeFlight(
 ): FlightState {
   const dt = Math.max(0, Math.min(deltaSeconds, 0.05));
   const throttle = clamp(input.throttle, 0, 1);
+  const brake = clamp(input.brake, 0, 1);
   const pitchInput = clamp(input.pitch, -1, 1);
   const rollInput = clamp(input.roll, -1, 1);
   const yawInput = clamp(input.yaw, -1, 1);
 
-  const acceleration = throttle > 0.001 ? 11 * throttle : state.onGround ? -5.5 : -2;
+  const coastingDeceleration =
+    throttle > 0.001 ? 0 : state.onGround ? 5.5 : 2;
+  const brakeDeceleration =
+    brake * (state.onGround ? GROUND_BRAKE_DECELERATION : AIRBRAKE_DECELERATION);
+  const acceleration =
+    throttle * 11 - coastingDeceleration - brakeDeceleration;
   let speed = clamp(state.speed + acceleration * dt, 0, MAX_SPEED);
 
   const pitchTarget = pitchInput * MAX_PITCH;
@@ -73,23 +84,28 @@ export function stepArcadeFlight(
   let pitch = moveTowards(state.pitch, pitchTarget, AIR_PITCH_RATE * dt);
   let roll = moveTowards(state.roll, rollTarget, AIR_ROLL_RATE * dt);
 
-  let stalled =
+  const enteringStall =
     !state.onGround &&
-    (speed < STALL_SPEED || (pitch > STALL_PITCH && speed < 28));
+    (speed < STALL_SPEED ||
+      (pitch > STALL_PITCH && speed < HIGH_PITCH_STALL_MAX_SPEED));
+  const recoveredFromStall =
+    speed >= STALL_RECOVERY_SPEED && pitch <= STALL_RECOVERY_PITCH;
+  const stalled =
+    !state.onGround &&
+    (state.stalled ? !recoveredFromStall : enteringStall);
 
   if (stalled) {
-    pitch = moveTowards(pitch, -9 * DEG, STALL_PITCH_DOWN_RATE * dt);
-    roll = moveTowards(roll, 0, AIR_ROLL_RATE * 0.75 * dt);
+    pitch = moveTowards(pitch, -11 * DEG, STALL_PITCH_DOWN_RATE * dt);
+    roll = moveTowards(roll, 0, AIR_ROLL_RATE * 0.7 * dt);
     speed = clamp(speed + 2.5 * dt, 0, MAX_SPEED);
-
-    stalled = speed < STALL_SPEED || (pitch > STALL_PITCH && speed < 28);
   }
 
   const speedFactor = clamp(speed / 32, 0.25, 1.15);
-  const controlFactor = stalled ? 0.35 : 1;
+  const controlFactor = stalled ? 0.28 : 1;
   const headingRate = state.onGround
     ? yawInput * GROUND_YAW_RATE
-    : (yawInput * DIRECT_YAW_RATE + Math.sin(roll) * BANK_TURN_RATE * speedFactor) *
+    : (yawInput * DIRECT_YAW_RATE +
+        Math.sin(roll) * BANK_TURN_RATE * speedFactor) *
       controlFactor;
   const heading = wrapAngle(state.heading + headingRate * dt);
 
@@ -98,7 +114,10 @@ export function stepArcadeFlight(
   const dz = Math.sin(heading) * horizontalSpeed * dt;
 
   if (state.onGround) {
-    const canLiftOff = speed >= TAKEOFF_SPEED && pitch > 4 * DEG;
+    const canLiftOff =
+      brake < 0.2 &&
+      speed >= TAKEOFF_SPEED &&
+      pitch > 4 * DEG;
 
     if (!canLiftOff) {
       pitch = Math.min(pitch, 8 * DEG);
@@ -134,8 +153,8 @@ export function stepArcadeFlight(
     };
   }
 
-  const lowSpeedSink = Math.max(0, STALL_SPEED - speed) * 0.65;
-  const stallSink = stalled ? 5.5 : 0;
+  const lowSpeedSink = Math.max(0, STALL_SPEED - speed) * 0.9;
+  const stallSink = stalled ? 7 : 0;
   const verticalSpeed = speed * Math.sin(pitch) - lowSpeedSink - stallSink;
   const nextY = state.position.y + verticalSpeed * dt;
 

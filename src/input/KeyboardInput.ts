@@ -14,7 +14,9 @@ export class KeyboardInput {
       pitch: this.#axis('ArrowDown', 'ArrowUp'),
       roll: this.#axis('KeyA', 'KeyD'),
       yaw: this.#axis('KeyQ', 'KeyE'),
-      throttle: this.#pressed.has('Space') ? 1 : 0
+      throttle: this.#pressed.has('Space') ? 1 : 0,
+      brake:
+        this.#pressed.has('ShiftLeft') || this.#pressed.has('ShiftRight') ? 1 : 0
     };
   }
 
@@ -33,7 +35,12 @@ export class KeyboardInput {
 
   #onKeyDown = (event: KeyboardEvent): void => {
     this.#pressed.add(event.code);
-    if (event.code === 'Space' || event.code.startsWith('Arrow')) {
+    if (
+      event.code === 'Space' ||
+      event.code === 'ShiftLeft' ||
+      event.code === 'ShiftRight' ||
+      event.code.startsWith('Arrow')
+    ) {
       event.preventDefault();
     }
   };

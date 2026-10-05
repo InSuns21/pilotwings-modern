@@ -46,6 +46,9 @@ A browser-first 3D flying game inspired by the approachable mission-flight genre
 - Terrain collision is fatal.
 - Airborne ground contact outside the runway is fatal.
 - Touchdown is fatal when speed, pitch/roll attitude, or descent rate exceeds configured safe limits.
+- Stall entry and stall recovery use separate thresholds so a stall cannot flicker on/off around one speed.
+- Full stall produces strong sink and reduced control authority; it remains recoverable with nose-down attitude and restored speed.
+- `FlightInput.brake` is normalized to `[0, 1]`; in flight it increases drag, while on the runway it applies substantially stronger wheel braking.
 - A crash freezes simulation, marks the mission failed, reports the reason, and triggers a visual wreck/explosion effect.
 - Safety rules are deterministic and unit-tested.
 

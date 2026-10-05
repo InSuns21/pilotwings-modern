@@ -6,24 +6,26 @@ describe('combineFlightInputs', () => {
   it('combines keyboard and touch axes while clamping the result', () => {
     expect(
       combineFlightInputs(
-        { pitch: 0.8, roll: -0.4, yaw: 0, throttle: 0 },
-        { pitch: 0.6, roll: 0.2, yaw: -1, throttle: 1 }
+        { pitch: 0.8, roll: -0.4, yaw: 0, throttle: 0, brake: 0.3 },
+        { pitch: 0.6, roll: 0.2, yaw: -1, throttle: 1, brake: 0.8 }
       )
     ).toEqual({
       pitch: 1,
       roll: -0.2,
       yaw: -1,
-      throttle: 1
+      throttle: 1,
+      brake: 0.8
     });
   });
 
-  it('keeps the strongest throttle request', () => {
-    expect(
-      combineFlightInputs(
-        { pitch: 0, roll: 0, yaw: 0, throttle: 0.25 },
-        { pitch: 0, roll: 0, yaw: 0, throttle: 0.8 }
-      ).throttle
-    ).toBe(0.8);
+  it('keeps the strongest throttle and brake requests', () => {
+    const combined = combineFlightInputs(
+      { pitch: 0, roll: 0, yaw: 0, throttle: 0.25, brake: 0.9 },
+      { pitch: 0, roll: 0, yaw: 0, throttle: 0.8, brake: 0.2 }
+    );
+
+    expect(combined.throttle).toBe(0.8);
+    expect(combined.brake).toBe(0.9);
   });
 });
 
