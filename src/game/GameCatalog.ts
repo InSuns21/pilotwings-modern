@@ -26,7 +26,7 @@ export const WORLDS: readonly CatalogOption<WorldId>[] = [
     id: 'training-island',
     name: 'トレーニング・アイランド',
     subtitle: 'TRAINING ISLAND',
-    description: '滑走路、草地、低い山で構成された基本訓練用ワールド。'
+    description: '海岸線、丘陵、空港、集落、マリーナを備えた沿岸型の基本訓練ワールド。'
   }
 ];
 
