@@ -185,7 +185,8 @@ function updateImageryLod(
   state: ImageryLodState,
   worldX: number,
   worldZ: number,
-  maxAnisotropy: number
+  maxAnisotropy: number,
+  onVisualChange?: () => void
 ): void {
   const center = matsumotoWorldToTileFraction(
     worldX,
@@ -242,7 +243,8 @@ function updateImageryLod(
       loader,
       tile,
       state.config,
-      maxAnisotropy
+      maxAnisotropy,
+      onVisualChange
     );
     state.active.set(key, active);
     state.group.add(active.mesh);
