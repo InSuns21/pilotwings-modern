@@ -127,7 +127,12 @@ function createMatsumotoPreview(
       disposeMaterial(loadingGround.material);
       world = createMatsumotoWorldVisual(runtime, {
         enableDetailStreaming: false,
-        maxAnisotropy: preview.renderer.capabilities.getMaxAnisotropy()
+        maxAnisotropy: preview.renderer.capabilities.getMaxAnisotropy(),
+        onVisualChange: () => {
+          if (!disposed) {
+            render();
+          }
+        }
       });
       preview.scene.add(world.root);
       render();
