@@ -2,7 +2,6 @@ import {
   AIRCRAFT,
   DEFAULT_GAME_SELECTION_IDS,
   DEFAULT_WORLD_SETTINGS,
-  TASKS,
   WORLDS,
   getAvailableTasks,
   resolveGameSelection,
