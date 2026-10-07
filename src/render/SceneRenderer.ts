@@ -4,9 +4,10 @@ import { createMatsumotoWorldVisual } from './MatsumotoWorldVisual';
 import type { GameSelection } from '../game/GameCatalog';
 import { flightOrientation, type FlightState } from '../flight/ArcadeFlightModel';
 import {
-  LANDING_ZONE,
-  TRAINING_RINGS,
-  type TrainingMissionProgress
+  getTrainingCourse,
+  type LandingZone,
+  type TrainingMissionProgress,
+  type TrainingRing
 } from '../game/TrainingMission';
 import { createTrainingIslandVisual } from './TrainingIslandVisual';
 import type { WorldRuntime } from '../world/WorldRuntime';
@@ -294,7 +295,7 @@ export class SceneRenderer {
       case 'training-island':
         this.#worldVisual = createTrainingIslandVisual();
         this.#scene.add(this.#worldVisual.root);
-        this.#buildAirportOverlays();
+        this.#buildStartPad();
         return;
 
       case 'matsumoto-real':
@@ -305,17 +306,15 @@ export class SceneRenderer {
           maxAnisotropy: this.#renderer.capabilities.getMaxAnisotropy()
         });
         this.#scene.add(this.#worldVisual.root);
-        this.#buildAirportOverlays();
+        this.#buildStartPad();
         return;
     }
   }
 
   #buildTaskVisuals(selection: GameSelection): void {
-    switch (selection.task.id) {
-      case 'ring-training':
-        this.#buildRings();
-        return;
-    }
+    const course = getTrainingCourse(selection.task.id);
+    this.#buildLandingZone(course.landingZone);
+    this.#buildRings(course.rings);
   }
 
   #updateCrashEffect(): void {
@@ -354,22 +353,7 @@ export class SceneRenderer {
     });
   }
 
-  #buildAirportOverlays(): void {
-    const landingZone = new THREE.Mesh(
-      new THREE.PlaneGeometry(
-        LANDING_ZONE.maxX - LANDING_ZONE.minX,
-        LANDING_ZONE.halfWidth * 2
-      ),
-      this.#landingMaterial
-    );
-    landingZone.rotation.x = -Math.PI / 2;
-    landingZone.position.set(
-      (LANDING_ZONE.minX + LANDING_ZONE.maxX) / 2,
-      0.185,
-      0
-    );
-    this.#scene.add(landingZone);
-
+  #buildStartPad(): void {
     const startPadMaterial = new THREE.MeshStandardMaterial({
       color: 0x5ba4df,
       transparent: true,
@@ -384,8 +368,27 @@ export class SceneRenderer {
     this.#scene.add(startPad);
   }
 
-  #buildRings(): void {
-    for (const ring of TRAINING_RINGS) {
+  #buildLandingZone(zone: LandingZone): void {
+    const landingZone = new THREE.Mesh(
+      new THREE.PlaneGeometry(
+        zone.maxX - zone.minX,
+        zone.halfWidth * 2
+      ),
+      this.#landingMaterial
+    );
+    landingZone.rotation.x = -Math.PI / 2;
+    landingZone.position.set(
+      (zone.minX + zone.maxX) / 2,
+      0.185,
+      0
+    );
+    this.#scene.add(landingZone);
+  }
+
+  #buildRings(rings: readonly TrainingRing[]): void {
+    let previous = { x: -175, z: 0 };
+
+    for (const ring of rings) {
       const material = new THREE.MeshStandardMaterial({
         color: 0xff8a4c,
         emissive: 0x4a1905,
@@ -399,10 +402,16 @@ export class SceneRenderer {
         new THREE.TorusGeometry(ring.radius, 0.75, 16, 48),
         material
       );
-      mesh.rotation.y = Math.PI / 2;
+      const approachHeading = Math.atan2(
+        ring.center.z - previous.z,
+        ring.center.x - previous.x
+      );
+      mesh.rotation.y = Math.PI / 2 - approachHeading;
       mesh.position.set(ring.center.x, ring.center.y, ring.center.z);
       mesh.castShadow = true;
       this.#scene.add(mesh);
+
+      previous = ring.center;
     }
   }
 }
