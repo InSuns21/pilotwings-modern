@@ -990,3 +990,270 @@ button {
     grid-template-rows: 40px 53px 49px;
   }
 }
+
+
+/* Flight-deck instruments are presentation mirrors of the authoritative state.
+   Keep them away from the virtual stick and the five-action touch cluster. */
+.flight-instruments {
+  position: absolute;
+  z-index: 10;
+  top: max(18px, env(safe-area-inset-top));
+  right: max(18px, env(safe-area-inset-right));
+  width: 356px;
+  padding: 10px;
+  border: 1px solid #708894;
+  border-radius: 17px;
+  background: linear-gradient(165deg, rgb(28 43 53 / 94%), rgb(9 19 28 / 93%));
+  box-shadow: inset 0 1px 1px rgb(255 255 255 / 14%), 0 12px 30px rgb(0 0 0 / 29%);
+  color: #edf4e9;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.instrument-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.instrument-gauge {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  padding: 5px 3px 7px;
+  border-radius: 11px;
+  background: #192a34;
+  box-shadow: inset 0 0 0 1px rgb(175 201 206 / 16%);
+}
+
+.instrument-caption {
+  color: #b1c9c5;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.instrument-gauge svg {
+  display: block;
+  width: min(100%, 104px);
+  aspect-ratio: 1;
+}
+
+.instrument-gauge strong {
+  color: #f8f3da;
+  font-size: 17px;
+  line-height: 1.1;
+  letter-spacing: .04em;
+}
+
+.instrument-gauge small {
+  color: #96b9b3;
+  font-size: 9px;
+}
+
+.attitude-bezel,
+.compass-bezel {
+  position: relative;
+  width: min(100%, 104px);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 4px solid #627b85;
+  border-radius: 50%;
+  background: #15252f;
+  box-shadow: inset 0 0 0 2px #102430;
+}
+
+.attitude-horizon {
+  position: absolute;
+  inset: -50%;
+  border-radius: 50%;
+  transform-origin: 50% 50%;
+}
+
+.attitude-sky,
+.attitude-earth {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 50%;
+}
+
+.attitude-sky {
+  top: 0;
+  background: #5599b5;
+}
+
+.attitude-earth {
+  bottom: 0;
+  background: #9b734f;
+}
+
+.attitude-horizon-line {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  border-top: 2px solid #f8ead1;
+}
+
+.attitude-pitch-line {
+  position: absolute;
+  left: 36%;
+  width: 28%;
+  border-top: 2px solid #d1ecea;
+}
+
+.attitude-pitch-up { top: 35%; }
+.attitude-pitch-down { top: 65%; }
+
+.attitude-wings {
+  position: absolute;
+  top: 49%;
+  left: 0;
+  width: 100%;
+  color: #fff4cf;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 900;
+  text-shadow: 0 1px 4px #17242f;
+  transform: translateY(-50%);
+}
+
+.compass-rose {
+  position: absolute;
+  inset: 5px;
+  border: 2px dashed #8daeb6;
+  border-radius: 50%;
+  background: radial-gradient(circle, #30434d, #101e29);
+}
+
+.compass-rose span {
+  position: absolute;
+  color: #f2ebd4;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.rose-n { top: 5px; left: 50%; transform: translateX(-50%); }
+.rose-e { top: 50%; right: 4px; transform: translateY(-50%); }
+.rose-s { bottom: 4px; left: 50%; transform: translateX(-50%); }
+.rose-w { top: 50%; left: 3px; transform: translateY(-50%); }
+
+.compass-lubber {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  color: #ffc978;
+  font-size: 12px;
+  transform: translateX(-50%);
+}
+
+.index-map-panel {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #58737c;
+  border-radius: 10px;
+  background: #102731;
+}
+
+.index-map-heading,
+.map-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.index-map-heading strong {
+  font-size: 10px;
+  letter-spacing: .12em;
+}
+
+.index-map-heading span,
+.map-footer span {
+  color: #8db0b6;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.index-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 6px 0 4px;
+  border-radius: 5px;
+  box-shadow: inset 0 0 12px rgb(0 0 0 / 20%);
+}
+
+.map-objective text {
+  fill: #ffe39e;
+  font-size: 11px;
+  font-weight: 900;
+  paint-order: stroke;
+  stroke: #162b35;
+  stroke-width: 2px;
+}
+
+.map-objective.active circle {
+  stroke: #fff0a2;
+  stroke-width: 3px;
+  filter: drop-shadow(0 0 2px #f3b94d);
+}
+
+.map-footer {
+  border-top: 1px solid #294551;
+  padding-top: 5px;
+}
+
+.weapon-sight[data-locked="true"] {
+  color: #9effa6;
+  filter: drop-shadow(0 0 5px #3d9f51);
+}
+
+@media (max-width: 1080px) {
+  .flight-instruments {
+    width: 295px;
+    padding: 7px;
+  }
+
+  .instrument-caption { font-size: 8px; }
+  .instrument-gauge strong { font-size: 14px; }
+  .instrument-gauge small { font-size: 8px; }
+  .index-map-heading span { font-size: 7px; }
+  .hud { max-width: min(420px, calc(100vw - 340px)); }
+}
+
+@media (any-pointer: coarse) and (orientation: landscape) and (max-height: 700px) {
+  .flight-instruments {
+    top: max(9px, env(safe-area-inset-top));
+    right: max(10px, env(safe-area-inset-right));
+    width: min(290px, 34vw);
+  }
+
+  .index-map-panel { padding: 5px; margin-top: 4px; }
+  .instrument-gauge { padding: 2px 1px 3px; }
+  .instrument-gauge strong { font-size: 12px; }
+  .instrument-gauge small { font-size: 7px; }
+  .hud { max-width: min(390px, 49vw); }
+}
+
+@media (max-width: 700px) and (orientation: portrait) {
+  .flight-instruments {
+    top: auto;
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(225px, calc(env(safe-area-inset-bottom) + 195px));
+    width: min(214px, 52vw);
+    padding: 5px;
+  }
+
+  .instrument-row { gap: 2px; }
+  .instrument-caption { font-size: 6px; }
+  .instrument-gauge { padding: 3px 1px; }
+  .instrument-gauge strong { font-size: 11px; }
+  .instrument-gauge small { font-size: 7px; }
+  .index-map-panel { padding: 5px; }
+  .index-map-heading span { display: none; }
+  .hud { max-width: calc(100vw - 24px); }
+}
