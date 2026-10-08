@@ -937,3 +937,56 @@ button {
     display: none;
   }
 }
+
+
+/* The gun sight is projected from the aircraft's bore axis, not the chase
+   camera's fixed forward-reference reticle. */
+.weapon-sight {
+  position: absolute;
+  z-index: 9;
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  color: #ffedb6;
+  transform: translate(-50%, -50%);
+  text-shadow: 0 1px 4px #101a20;
+  filter: drop-shadow(0 1px 2px #0b1d29);
+  pointer-events: none;
+}
+
+.weapon-sight[hidden] {
+  display: none;
+}
+
+.weapon-sight span {
+  font-size: 43px;
+  line-height: 1;
+}
+
+.weapon-sight small {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgb(8 19 26 / 64%);
+  font-size: 9px;
+  font-weight: 900;
+  white-space: nowrap;
+  letter-spacing: .06em;
+}
+
+.touch-actions.shooting-actions {
+  grid-template-rows: 48px 64px 58px;
+}
+
+.touch-fire {
+  grid-column: 1 / -1;
+  border-color: rgb(255 211 79 / 62%);
+  background: rgb(187 74 45 / 82%);
+  font-size: 17px;
+}
+
+@media (any-pointer: coarse) and (orientation: landscape) and (max-height: 700px) {
+  .touch-actions.shooting-actions {
+    grid-template-rows: 40px 53px 49px;
+  }
+}
