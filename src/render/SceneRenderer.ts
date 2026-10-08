@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { AircraftModel } from './AircraftModel';
 import { createMatsumotoWorldVisual } from './MatsumotoWorldVisual';
 import type { GameSelection } from '../game/GameCatalog';
-import { GROUND_TARGETS, TARGET_CENTER_Y, weaponRay, type GroundShot } from '../game/GroundTargetMission';
+import { GROUND_TARGETS, TARGET_CENTER_Y, weaponRay, shotTargetIntersection, shotGroundIntersection, isTargetInSight, type GroundShot } from '../game/GroundTargetMission';
 import type { TaskProgress } from '../game/TaskRuntime';
 import { flightOrientation, type FlightState } from '../flight/ArcadeFlightModel';
 import {
@@ -153,19 +153,30 @@ export class SceneRenderer {
     this.#camera.lookAt(lookTarget);
   }
 
-  weaponSightPosition(state: FlightState): { x: number; y: number } | null {
+  weaponSightPosition(
+    state: FlightState,
+    progress: TaskProgress
+  ): { x: number; y: number; onTarget: boolean } | null {
     const ray = weaponRay(state);
-    const point = new THREE.Vector3(
-      ray.origin.x + ray.direction.x * 160,
-      ray.origin.y + ray.direction.y * 160,
-      ray.origin.z + ray.direction.z * 160
-    ).project(this.#camera);
+    const target = 'kind' in progress ? GROUND_TARGETS[progress.hitCount] : undefined;
+    const impact = target ? shotTargetIntersection(ray, target) : null;
+    const ground = shotGroundIntersection(ray);
+    // Project the actual target-plane intercept, not an arbitrary fixed distance:
+    // the chase camera is offset behind the nose, so fixed-distance reticles
+    // otherwise visibly drift off the scored hit point.
+    const sight = impact ?? ground ?? {
+      x: ray.origin.x + ray.direction.x * 160,
+      y: ray.origin.y + ray.direction.y * 160,
+      z: ray.origin.z + ray.direction.z * 160
+    };
+    const point = new THREE.Vector3(sight.x, sight.y, sight.z).project(this.#camera);
     if (point.z < -1 || point.z > 1 || Math.abs(point.x) > 1 || Math.abs(point.y) > 1) {
       return null;
     }
     return {
       x: (point.x + 1) * this.host.clientWidth / 2,
-      y: (1 - point.y) * this.host.clientHeight / 2
+      y: (1 - point.y) * this.host.clientHeight / 2,
+      onTarget: !!target && isTargetInSight(state, target)
     };
   }
 
