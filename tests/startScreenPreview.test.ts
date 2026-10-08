@@ -8,9 +8,15 @@ describe('start screen previews', () => {
       const svg = taskPreviewSvg(task.id);
       expect(svg).toContain('<svg');
       expect(svg).toContain('#ff8a4c');
-      expect(svg).toContain('8 RINGS');
-      expect(svg).toContain('CLIMB');
-      expect(svg).toContain('FINAL');
+      if (task.id === 'island-ground-targets') {
+        expect(svg).toContain('3 GROUND TARGETS');
+        expect(svg).toContain('AIM');
+        expect(svg).toContain('REATTACK');
+      } else {
+        expect(svg).toContain('8 RINGS');
+        expect(svg).toContain('CLIMB');
+        expect(svg).toContain('FINAL');
+      }
     }
   });
 });

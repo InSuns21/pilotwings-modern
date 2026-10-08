@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { AircraftModel } from './AircraftModel';
 import { createMatsumotoWorldVisual } from './MatsumotoWorldVisual';
 import type { GameSelection } from '../game/GameCatalog';
+import { GROUND_TARGETS, weaponRay, type GroundShot } from '../game/GroundTargetMission';
+import type { TaskProgress } from '../game/TaskRuntime';
 import { flightOrientation, type FlightState } from '../flight/ArcadeFlightModel';
 import {
   getTrainingCourse,
@@ -32,6 +34,11 @@ export class SceneRenderer {
   readonly #resizeObserver: ResizeObserver;
   #worldVisual: WorldVisual | null = null;
   readonly #ringMaterials: THREE.MeshStandardMaterial[] = [];
+  readonly #targetMaterials: THREE.MeshBasicMaterial[] = [];
+  #targetGroup: THREE.Group | null = null;
+  #shotLine: THREE.Line | null = null;
+  #shotUntil = 0;
+  #lastShotId = 0;
   readonly #landingMaterial = new THREE.MeshStandardMaterial({
     color: 0x61d174,
     emissive: 0x163d1d,
@@ -144,7 +151,39 @@ export class SceneRenderer {
     this.#camera.lookAt(lookTarget);
   }
 
-  setMissionProgress(progress: TrainingMissionProgress): void {
+  weaponSightPosition(state: FlightState): { x: number; y: number } | null {
+    const ray = weaponRay(state);
+    const point = new THREE.Vector3(
+      ray.origin.x + ray.direction.x * 160,
+      ray.origin.y + ray.direction.y * 160,
+      ray.origin.z + ray.direction.z * 160
+    ).project(this.#camera);
+    if (point.z < -1 || point.z > 1 || Math.abs(point.x) > 1 || Math.abs(point.y) > 1) {
+      return null;
+    }
+    return {
+      x: (point.x + 1) * this.host.clientWidth / 2,
+      y: (1 - point.y) * this.host.clientHeight / 2
+    };
+  }
+
+  setMissionProgress(progress: TaskProgress): void {
+    if ('kind' in progress) {
+      this.#targetMaterials.forEach((material, index) => {
+        const color = progress.phase === 'failed'
+          ? 0x8c4646
+          : index < progress.hitCount
+            ? 0x63e28b
+            : index === progress.hitCount
+              ? 0xffd34f
+              : 0xa1aab0;
+        material.color.setHex(color);
+      });
+      if (progress.lastShot && progress.lastShot.id !== this.#lastShotId) {
+        this.#showShot(progress.lastShot);
+      }
+      return;
+    }
     this.#ringMaterials.forEach((material, index) => {
       if (progress.phase === 'failed') {
         material.color.setHex(0x7d2424);
@@ -255,11 +294,14 @@ export class SceneRenderer {
     this.#crashPieces = [];
     this.#crashSmoke = [];
     this.#crashStartedAt = 0;
+    this.#clearShot();
+    this.#lastShotId = 0;
     this.#aircraft.resetAnimation();
     this.#aircraft.root.visible = true;
   }
 
   render(): void {
+    if (this.#shotLine && performance.now() > this.#shotUntil) this.#clearShot();
     this.#updateCrashEffect();
     this.#renderer.render(this.#scene, this.#camera);
   }
@@ -274,6 +316,17 @@ export class SceneRenderer {
 
   dispose(): void {
     this.#resizeObserver.disconnect();
+    this.#clearShot();
+    if (this.#targetGroup) {
+      this.#targetGroup.traverse((item) => {
+        if (!(item instanceof THREE.Mesh)) return;
+        item.geometry.dispose();
+        const materials = Array.isArray(item.material) ? item.material : [item.material];
+        materials.forEach((material) => material.dispose());
+      });
+      this.#scene.remove(this.#targetGroup);
+      this.#targetGroup = null;
+    }
     this.#worldVisual?.dispose();
     this.#worldVisual = null;
     this.#renderer.dispose();
@@ -312,9 +365,77 @@ export class SceneRenderer {
   }
 
   #buildTaskVisuals(selection: GameSelection): void {
+    if (selection.task.id === 'island-ground-targets') {
+      this.#buildGroundTargets();
+      return;
+    }
     const course = getTrainingCourse(selection.task.id);
     this.#buildLandingZone(course.landingZone);
     this.#buildRings(course.rings);
+  }
+
+  #buildGroundTargets(): void {
+    const group = new THREE.Group();
+    group.name = 'ground-target-range';
+    GROUND_TARGETS.forEach((target, index) => {
+      const baseMaterial = new THREE.MeshBasicMaterial({
+        color: 0x273540, side: THREE.DoubleSide
+      });
+      const accent = new THREE.MeshBasicMaterial({
+        color: index === 0 ? 0xffd34f : 0xa1aab0,
+        side: THREE.DoubleSide
+      });
+      this.#targetMaterials.push(accent);
+
+      const base = new THREE.Mesh(new THREE.CircleGeometry(target.radius, 48), baseMaterial);
+      base.rotation.x = -Math.PI / 2;
+      base.position.set(target.x, 0.19, target.z);
+      group.add(base);
+
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(target.radius * 0.55, target.radius * 0.86, 48),
+        accent
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.set(target.x, 0.205, target.z);
+      group.add(ring);
+
+      const bullseye = new THREE.Mesh(
+        new THREE.CircleGeometry(target.radius * 0.22, 32),
+        accent
+      );
+      bullseye.rotation.x = -Math.PI / 2;
+      bullseye.position.set(target.x, 0.215, target.z);
+      group.add(bullseye);
+    });
+    this.#targetGroup = group;
+    this.#scene.add(group);
+  }
+
+  #showShot(shot: GroundShot): void {
+    this.#clearShot();
+    this.#lastShotId = shot.id;
+    this.#shotLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(shot.start.x, shot.start.y, shot.start.z),
+        new THREE.Vector3(shot.end.x, shot.end.y, shot.end.z)
+      ]),
+      new THREE.LineBasicMaterial({
+        color: shot.hit ? 0x63e28b : 0xffc85e,
+        transparent: true,
+        opacity: 0.95
+      })
+    );
+    this.#scene.add(this.#shotLine);
+    this.#shotUntil = performance.now() + 170;
+  }
+
+  #clearShot(): void {
+    if (!this.#shotLine) return;
+    this.#scene.remove(this.#shotLine);
+    this.#shotLine.geometry.dispose();
+    (this.#shotLine.material as THREE.Material).dispose();
+    this.#shotLine = null;
   }
 
   #updateCrashEffect(): void {

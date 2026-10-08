@@ -28,6 +28,24 @@ export function taskPreviewSvg(id: TaskId): string {
         <text x="18" y="41" fill="#60736f" font-size="9" font-weight="700">8 RINGS · BASIC CONTROL CIRCUIT</text>
       </svg>`;
 
+    case 'island-ground-targets':
+      return `${SVG_OPEN}
+        <rect width="320" height="176" rx="14" fill="#dff2fc"/>
+        <path d="M0 104 Q110 79 320 114 V176 H0Z" fill="#82a961"/>
+        <path d="M20 145 L285 145" stroke="#315875" stroke-width="3" stroke-dasharray="8 7"/>
+        <path d="M52 131 Q128 67 193 102 T279 95" fill="none" stroke="#315875" stroke-width="4" stroke-dasharray="7 6"/>
+        <g fill="#fff2c2" stroke="#ff8a4c" stroke-width="5">
+          <circle cx="135" cy="103" r="16"/>
+          <circle cx="234" cy="111" r="16"/>
+          <circle cx="274" cy="88" r="16"/>
+        </g>
+        <g fill="#ff8a4c"><circle cx="135" cy="103" r="5"/><circle cx="234" cy="111" r="5"/><circle cx="274" cy="88" r="5"/></g>
+        <path d="M63 86 L95 78 L72 101 Z" fill="#315875"/>
+        <path d="M85 89 L131 105" stroke="#315875" stroke-width="2" stroke-dasharray="5 4"/>
+        <text x="18" y="24" fill="#315875" font-size="10" font-weight="900" letter-spacing="1">AIM → FIRE → TURN → REATTACK</text>
+        <text x="18" y="41" fill="#60736f" font-size="9" font-weight="700">3 GROUND TARGETS · FLIGHT CONTROL</text>
+      </svg>`;
+
     case 'matsumoto-pattern-training':
       return `${SVG_OPEN}
         <rect width="320" height="176" rx="14" fill="#d7e5dc"/>
