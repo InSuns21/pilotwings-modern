@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { AircraftModel } from './AircraftModel';
 import { createMatsumotoWorldVisual } from './MatsumotoWorldVisual';
 import type { GameSelection } from '../game/GameCatalog';
-import { GROUND_TARGETS, weaponRay, type GroundShot } from '../game/GroundTargetMission';
+import { GROUND_TARGETS, TARGET_CENTER_Y, weaponRay, type GroundShot } from '../game/GroundTargetMission';
 import type { TaskProgress } from '../game/TaskRuntime';
 import { flightOrientation, type FlightState } from '../flight/ArcadeFlightModel';
 import {
@@ -34,6 +34,8 @@ export class SceneRenderer {
   readonly #resizeObserver: ResizeObserver;
   #worldVisual: WorldVisual | null = null;
   readonly #ringMaterials: THREE.MeshStandardMaterial[] = [];
+  readonly #ringMeshes: THREE.Mesh[] = [];
+  readonly #targetBoards: THREE.Group[] = [];
   readonly #targetMaterials: THREE.MeshBasicMaterial[] = [];
   #targetGroup: THREE.Group | null = null;
   #shotLine: THREE.Line | null = null;
@@ -169,6 +171,9 @@ export class SceneRenderer {
 
   setMissionProgress(progress: TaskProgress): void {
     if ('kind' in progress) {
+      this.#targetBoards.forEach((board, index) => {
+        board.visible = progress.phase !== 'failed' && index >= progress.hitCount;
+      });
       this.#targetMaterials.forEach((material, index) => {
         const color = progress.phase === 'failed'
           ? 0x8c4646
@@ -185,6 +190,8 @@ export class SceneRenderer {
       return;
     }
     this.#ringMaterials.forEach((material, index) => {
+      const mesh = this.#ringMeshes[index];
+      if (mesh) mesh.visible = progress.phase !== 'failed' && index >= progress.nextRingIndex;
       if (progress.phase === 'failed') {
         material.color.setHex(0x7d2424);
         material.emissive.setHex(0x260606);
@@ -378,35 +385,56 @@ export class SceneRenderer {
     const group = new THREE.Group();
     group.name = 'ground-target-range';
     GROUND_TARGETS.forEach((target, index) => {
-      const baseMaterial = new THREE.MeshBasicMaterial({
-        color: 0x273540, side: THREE.DoubleSide
-      });
+      // Stand each board upright in the YZ plane: the rendered target and the
+      // pure shotTargetIntersection() use precisely the same scoring geometry.
+      const board = new THREE.Group();
+      board.name = `target-${index + 1}`;
+      const backing = new THREE.Mesh(
+        new THREE.CircleGeometry(target.radius, 48),
+        new THREE.MeshBasicMaterial({
+          color: 0x273540,
+          side: THREE.DoubleSide
+        })
+      );
+      backing.rotation.y = Math.PI / 2;
+      backing.position.set(target.x, TARGET_CENTER_Y, target.z);
+      board.add(backing);
+
       const accent = new THREE.MeshBasicMaterial({
         color: index === 0 ? 0xffd34f : 0xa1aab0,
         side: THREE.DoubleSide
       });
       this.#targetMaterials.push(accent);
-
-      const base = new THREE.Mesh(new THREE.CircleGeometry(target.radius, 48), baseMaterial);
-      base.rotation.x = -Math.PI / 2;
-      base.position.set(target.x, 0.19, target.z);
-      group.add(base);
-
-      const ring = new THREE.Mesh(
-        new THREE.RingGeometry(target.radius * 0.55, target.radius * 0.86, 48),
+      const outer = new THREE.Mesh(
+        new THREE.RingGeometry(target.radius * 0.56, target.radius * 0.88, 48),
         accent
       );
-      ring.rotation.x = -Math.PI / 2;
-      ring.position.set(target.x, 0.205, target.z);
-      group.add(ring);
+      outer.rotation.y = Math.PI / 2;
+      outer.position.set(target.x - 0.035, TARGET_CENTER_Y, target.z);
+      board.add(outer);
 
       const bullseye = new THREE.Mesh(
-        new THREE.CircleGeometry(target.radius * 0.22, 32),
+        new THREE.CircleGeometry(target.radius * 0.24, 32),
         accent
       );
-      bullseye.rotation.x = -Math.PI / 2;
-      bullseye.position.set(target.x, 0.215, target.z);
-      group.add(bullseye);
+      bullseye.rotation.y = Math.PI / 2;
+      bullseye.position.set(target.x - 0.07, TARGET_CENTER_Y, target.z);
+      board.add(bullseye);
+
+      const postMaterial = new THREE.MeshStandardMaterial({
+        color: 0x3a4545, roughness: 0.9
+      });
+      for (const offset of [-target.radius * 0.7, target.radius * 0.7]) {
+        const post = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.85, 1.1, TARGET_CENTER_Y, 8),
+          postMaterial
+        );
+        post.position.set(target.x, TARGET_CENTER_Y / 2, target.z + offset);
+        post.castShadow = true;
+        board.add(post);
+      }
+      group.add(board);
+      this.#targetBoards.push(board);
     });
     this.#targetGroup = group;
     this.#scene.add(group);
@@ -531,6 +559,7 @@ export class SceneRenderer {
       mesh.position.set(ring.center.x, ring.center.y, ring.center.z);
       mesh.castShadow = true;
       this.#scene.add(mesh);
+      this.#ringMeshes.push(mesh);
 
       previous = ring.center;
     }
