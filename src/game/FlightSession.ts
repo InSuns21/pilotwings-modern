@@ -17,7 +17,7 @@ import {
   type FlightSafetyState
 } from './FlightSafety';
 import type { GameSelection } from './GameCatalog';
-import type { TrainingMissionProgress } from './TrainingMission';
+import type { TaskProgress } from './TaskRuntime';
 import { createTaskRuntime } from './TaskRuntime';
 import { createWorldRuntime } from '../world/WorldRuntime';
 
@@ -31,6 +31,7 @@ export async function createFlightSession(
   onExitToTitle: () => void
 ): Promise<FlightSession> {
   const taskRuntime = createTaskRuntime(selection.task.id);
+  const shootingTask = selection.task.id === 'island-ground-targets';
 
   root.innerHTML = `
     <div class="game-shell">
@@ -58,7 +59,8 @@ export async function createFlightSession(
           <span>PITCH <b data-pitch>0</b>°</span>
           <span>PATH <b data-flight-path>0</b>°</span>
           <span>V/S <b data-vertical-speed>0.0</b> m/s</span>
-          <span>RING <b data-rings>0 / ${taskRuntime.ringCount}</b></span>
+          <span>${taskRuntime.objectiveLabel} <b data-rings>0 / ${taskRuntime.objectiveCount}</b></span>
+          ${shootingTask ? '<span>SHOTS <b data-shots>0</b></span>' : ''}
         </div>
 
         <div class="flight-warning" data-flight-warning hidden></div>
@@ -68,10 +70,10 @@ export async function createFlightSession(
         </div>
 
         <span class="keyboard-help">
-          ↑↓ pitch · A/D roll · Q/E yaw · Space thrust · Shift brake
+          ↑↓ pitch · A/D roll · Q/E yaw · Space thrust · Shift brake${shootingTask ? ' · F fire' : ''}
         </span>
         <span class="touch-help">
-          左スティック: pitch / roll · 右: yaw / thrust / brake
+          左スティック: pitch / roll · 右: yaw / thrust / brake${shootingTask ? ' / fire' : ''}
         </span>
 
         <div class="hud-actions">
@@ -79,6 +81,8 @@ export async function createFlightSession(
           <button type="button" data-exit-title>TITLE</button>
         </div>
       </aside>
+
+      ${shootingTask ? '<div class="weapon-sight" data-weapon-sight hidden aria-hidden="true"><span>＋</span><small>GUN SIGHT</small></div>' : ''}
 
       <div class="flight-reticle" aria-hidden="true">
         <span class="reticle-wing reticle-wing-left"></span>
@@ -146,6 +150,7 @@ export async function createFlightSession(
           >
             BRAKE
           </button>
+          ${shootingTask ? '<button class="touch-control-button touch-fire" type="button" data-touch-fire aria-label="Fire at ground target">FIRE</button>' : ''}
         </div>
       </div>
     </div>
@@ -164,6 +169,8 @@ export async function createFlightSession(
   const flightPathElement = root.querySelector<HTMLElement>('[data-flight-path]');
   const verticalSpeedElement = root.querySelector<HTMLElement>('[data-vertical-speed]');
   const ringsElement = root.querySelector<HTMLElement>('[data-rings]');
+  const shotsElement = root.querySelector<HTMLElement>('[data-shots]');
+  const weaponSight = root.querySelector<HTMLElement>('[data-weapon-sight]');
   const phaseElement = root.querySelector<HTMLElement>('[data-phase]');
   const warningElement = root.querySelector<HTMLElement>('[data-flight-warning]');
   const messageElement = root.querySelector<HTMLElement>('[data-mission-message]');
@@ -217,7 +224,7 @@ export async function createFlightSession(
 
   const updateHud = (
     state: FlightState,
-    progress: TrainingMissionProgress,
+    progress: TaskProgress,
     currentSafety: FlightSafetyState
   ): void => {
     speedElement.textContent = Math.round(state.speed * 3.6).toString();
@@ -231,7 +238,8 @@ export async function createFlightSession(
     pitchElement.textContent = Math.round(pitchDegrees(state)).toString();
     flightPathElement.textContent = Math.round(flightPathDegrees(state)).toString();
     verticalSpeedElement.textContent = state.verticalSpeed.toFixed(1);
-    ringsElement.textContent = `${progress.nextRingIndex} / ${taskRuntime.ringCount}`;
+    ringsElement.textContent = `${taskRuntime.completedObjectives(progress)} / ${taskRuntime.objectiveCount}`;
+    if (shotsElement && 'kind' in progress) shotsElement.textContent = String(progress.shotsFired);
     phaseElement.textContent = progress.phase.toUpperCase();
     phaseElement.dataset.phase = progress.phase;
     messageElement.textContent = progress.message;
@@ -312,7 +320,9 @@ export async function createFlightSession(
         return;
       }
 
-      const nextMission = taskRuntime.updateProgress(mission, state);
+      const fireKeyboard = keyboardInput.consumeFire();
+      const fireTouch = touchInput.consumeFire();
+      const nextMission = taskRuntime.updateProgress(mission, state, fireKeyboard || fireTouch);
       if (nextMission !== mission) {
         mission = nextMission;
         renderer.setMissionProgress(mission);
@@ -322,6 +332,14 @@ export async function createFlightSession(
 
     const state = physics.getAircraftState();
     renderer.syncAircraft(state);
+    if (weaponSight) {
+      const position = renderer.weaponSightPosition(state);
+      weaponSight.hidden = gameOver || position === null;
+      if (position) {
+        weaponSight.style.left = `${position.x}px`;
+        weaponSight.style.top = `${position.y}px`;
+      }
+    }
     renderer.render();
     updateHud(state, mission, safety);
     animationFrameId = requestAnimationFrame(frame);
