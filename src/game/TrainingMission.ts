@@ -140,7 +140,7 @@ export interface TrainingMissionProgress {
   readonly message: string;
 }
 
-export function getTrainingCourse(taskId: TaskId): TrainingCourse {
+export function getTrainingCourse(taskId: Exclude<TaskId, 'island-ground-targets'>): TrainingCourse {
   switch (taskId) {
     case 'island-flight-basics':
       return ISLAND_FLIGHT_BASICS;
