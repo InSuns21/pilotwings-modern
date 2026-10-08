@@ -44,6 +44,22 @@ describe('flight-deck instruments', () => {
     expect(html).toContain('data-map-aircraft');
   });
 
+  it('keeps frequent-read gauges separate from the secondary navigational map', () => {
+    const selection = resolveGameSelection({
+      worldId: 'training-island',
+      aircraftId: 'trainer-01',
+      taskId: 'island-flight-basics'
+    });
+    const html = instrumentPanelMarkup(selection);
+    // The instrument strip must close before the independently positioned map.
+    expect(html).toMatch(/class="instrument-row"[\\s\\S]*?<\\/aside>\\s*<section class="index-map-panel"/);
+    expect(html).toContain('data-map-toggle');
+    expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain('aria-controls="flight-index-content"');
+    expect(html).toContain('class="index-map-content" id="flight-index-content"');
+    expect((html.match(/class="instrument-gauge"/g) ?? [])).toHaveLength(3);
+  });
+
   it('shows the selected Matsumoto training route with true-heading compass', () => {
     const selection = resolveGameSelection({
       worldId: 'matsumoto-real',
