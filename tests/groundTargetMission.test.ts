@@ -19,7 +19,7 @@ function aimingAt(target: GroundTarget, altitude = 55): FlightState {
     ...createInitialFlightState(),
     onGround: false,
     speed: 32,
-    position: { x: target.x - distance - 3, y: altitude + RUNWAY_GROUND_Y, z: target.z },
+    position: { x: target.x - distance, y: altitude + RUNWAY_GROUND_Y, z: target.z },
     pitch,
     heading: 0
   };
