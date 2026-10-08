@@ -2,7 +2,6 @@ import { advanceFixedStep } from '../core/fixedStep';
 import {
   RUNWAY_GROUND_Y,
   flightPathDegrees,
-  headingDegrees,
   pitchDegrees,
   type FlightState
 } from '../flight/ArcadeFlightModel';
@@ -19,6 +18,7 @@ import {
 import type { GameSelection } from './GameCatalog';
 import type { TaskProgress } from './TaskRuntime';
 import { createTaskRuntime } from './TaskRuntime';
+import { mountFlightInstruments } from './FlightInstruments';
 import { createWorldRuntime } from '../world/WorldRuntime';
 
 export interface FlightSession {
@@ -53,9 +53,7 @@ export async function createFlightSession(
         </div>
 
         <div class="telemetry">
-          <span>SPD <b data-speed>0</b> km/h</span>
           <span>ALT <b data-altitude>0</b> m</span>
-          <span>HDG <b data-heading>000</b>°</span>
           <span>PITCH <b data-pitch>0</b>°</span>
           <span>PATH <b data-flight-path>0</b>°</span>
           <span>V/S <b data-vertical-speed>0.0</b> m/s</span>
@@ -81,6 +79,8 @@ export async function createFlightSession(
           <button type="button" data-exit-title>TITLE</button>
         </div>
       </aside>
+
+      <div data-flight-instruments></div>
 
       ${shootingTask ? '<div class="weapon-sight" data-weapon-sight hidden aria-hidden="true"><span>＋</span><small>GUN SIGHT</small></div>' : ''}
 
@@ -162,15 +162,14 @@ export async function createFlightSession(
   const gameOverRestart = root.querySelector<HTMLButtonElement>('[data-game-over-restart]');
   const gameOverTitle = root.querySelector<HTMLButtonElement>('[data-game-over-title]');
   const touchControls = root.querySelector<HTMLElement>('[data-touch-controls]');
-  const speedElement = root.querySelector<HTMLElement>('[data-speed]');
   const altitudeElement = root.querySelector<HTMLElement>('[data-altitude]');
-  const headingElement = root.querySelector<HTMLElement>('[data-heading]');
   const pitchElement = root.querySelector<HTMLElement>('[data-pitch]');
   const flightPathElement = root.querySelector<HTMLElement>('[data-flight-path]');
   const verticalSpeedElement = root.querySelector<HTMLElement>('[data-vertical-speed]');
   const ringsElement = root.querySelector<HTMLElement>('[data-rings]');
   const shotsElement = root.querySelector<HTMLElement>('[data-shots]');
   const weaponSight = root.querySelector<HTMLElement>('[data-weapon-sight]');
+  const instrumentsHost = root.querySelector<HTMLElement>('[data-flight-instruments]');
   const phaseElement = root.querySelector<HTMLElement>('[data-phase]');
   const warningElement = root.querySelector<HTMLElement>('[data-flight-warning]');
   const messageElement = root.querySelector<HTMLElement>('[data-mission-message]');
@@ -180,14 +179,13 @@ export async function createFlightSession(
 
   if (
     !viewport ||
+    !instrumentsHost ||
     !resetButton ||
     !exitButton ||
     !gameOverRestart ||
     !gameOverTitle ||
     !touchControls ||
-    !speedElement ||
     !altitudeElement ||
-    !headingElement ||
     !pitchElement ||
     !flightPathElement ||
     !verticalSpeedElement ||
@@ -202,6 +200,7 @@ export async function createFlightSession(
     throw new Error('Game shell did not initialize');
   }
 
+  const instruments = mountFlightInstruments(instrumentsHost, selection);
   const keyboardInput = new KeyboardInput();
   const touchInput = new TouchInput(touchControls);
   const [physics, worldRuntime] = await Promise.all([
@@ -227,14 +226,10 @@ export async function createFlightSession(
     progress: TaskProgress,
     currentSafety: FlightSafetyState
   ): void => {
-    speedElement.textContent = Math.round(state.speed * 3.6).toString();
     altitudeElement.textContent = Math.max(
       0,
       Math.round(state.position.y - RUNWAY_GROUND_Y)
     ).toString();
-    headingElement.textContent = Math.round(headingDegrees(state))
-      .toString()
-      .padStart(3, '0');
     pitchElement.textContent = Math.round(pitchDegrees(state)).toString();
     flightPathElement.textContent = Math.round(flightPathDegrees(state)).toString();
     verticalSpeedElement.textContent = state.verticalSpeed.toFixed(1);
@@ -243,6 +238,7 @@ export async function createFlightSession(
     phaseElement.textContent = progress.phase.toUpperCase();
     phaseElement.dataset.phase = progress.phase;
     messageElement.textContent = progress.message;
+    instruments.update(state, progress);
 
     warningElement.hidden = currentSafety.warning === null;
     warningElement.textContent = currentSafety.warning ?? '';
@@ -333,9 +329,12 @@ export async function createFlightSession(
     const state = physics.getAircraftState();
     renderer.syncAircraft(state);
     if (weaponSight) {
-      const position = renderer.weaponSightPosition(state);
+      const position = renderer.weaponSightPosition(state, mission);
       weaponSight.hidden = gameOver || position === null;
       if (position) {
+        weaponSight.dataset.locked = position.onTarget ? 'true' : 'false';
+        const label = weaponSight.querySelector<HTMLElement>('small');
+        if (label) label.textContent = position.onTarget ? 'ON TARGET · FIRE' : 'GUN SIGHT';
         weaponSight.style.left = `${position.x}px`;
         weaponSight.style.top = `${position.y}px`;
       }
