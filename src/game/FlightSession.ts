@@ -117,7 +117,7 @@ export async function createFlightSession(
           <span class="touch-stick-label">PITCH / ROLL</span>
         </div>
 
-        <div class="touch-actions">
+        <div class="touch-actions ${shootingTask ? 'shooting-actions' : ''}">
           <button
             class="touch-control-button touch-yaw"
             type="button"
