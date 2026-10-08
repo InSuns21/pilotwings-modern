@@ -18,6 +18,7 @@ export interface MatsumotoWorldVisual {
 export interface MatsumotoWorldVisualOptions {
   readonly enableDetailStreaming?: boolean;
   readonly maxAnisotropy?: number;
+  readonly onVisualChange?: () => void;
 }
 
 interface ImageryLodConfig {
@@ -80,18 +81,28 @@ export function createMatsumotoWorldVisual(
 
   for (const tile of runtime.terrain.tiles) {
     const geometry = createTerrainGeometry(runtime, tile);
+    const material = new THREE.MeshStandardMaterial({
+      color: 0x71806e,
+      roughness: 1,
+      metalness: 0
+    });
     const texture = loader.load(
-      matsumotoPhotoTileUrl(tile, runtime.terrain.zoom)
+      matsumotoPhotoTileUrl(tile, runtime.terrain.zoom),
+      (loadedTexture) => {
+        configurePhotoTexture(loadedTexture, maxAnisotropy);
+        material.color.setHex(0xffffff);
+        material.map = loadedTexture;
+        material.needsUpdate = true;
+        options.onVisualChange?.();
+      },
+      undefined,
+      () => {
+        options.onVisualChange?.();
+      }
     );
     configurePhotoTexture(texture, maxAnisotropy);
     baseTextures.add(texture);
 
-    const material = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      map: texture,
-      roughness: 1,
-      metalness: 0
-    });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.receiveShadow = true;
     root.add(mesh);
@@ -126,7 +137,8 @@ export function createMatsumotoWorldVisual(
           state,
           x,
           z,
-          maxAnisotropy
+          maxAnisotropy,
+          options.onVisualChange
         );
       }
     },
@@ -173,7 +185,8 @@ function updateImageryLod(
   state: ImageryLodState,
   worldX: number,
   worldZ: number,
-  maxAnisotropy: number
+  maxAnisotropy: number,
+  onVisualChange?: () => void
 ): void {
   const center = matsumotoWorldToTileFraction(
     worldX,
@@ -230,7 +243,8 @@ function updateImageryLod(
       loader,
       tile,
       state.config,
-      maxAnisotropy
+      maxAnisotropy,
+      onVisualChange
     );
     state.active.set(key, active);
     state.group.add(active.mesh);
@@ -242,7 +256,8 @@ function createImageryTile(
   loader: THREE.TextureLoader,
   tile: MapTileCoordinate,
   config: ImageryLodConfig,
-  maxAnisotropy: number
+  maxAnisotropy: number,
+  onVisualChange?: () => void
 ): ActiveImageryTile {
   const geometry = createImageryGeometry(
     runtime,
@@ -269,11 +284,13 @@ function createImageryTile(
       material.map = loadedTexture;
       material.opacity = 1;
       material.needsUpdate = true;
+      onVisualChange?.();
     },
     undefined,
     () => {
       material.opacity = 0;
       material.needsUpdate = true;
+      onVisualChange?.();
     }
   );
   configurePhotoTexture(texture, maxAnisotropy);
