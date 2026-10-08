@@ -30,6 +30,8 @@ export async function createFlightSession(
   selection: GameSelection,
   onExitToTitle: () => void
 ): Promise<FlightSession> {
+  const taskRuntime = createTaskRuntime(selection.task.id);
+
   root.innerHTML = `
     <div class="game-shell">
       <div class="viewport" data-viewport></div>
@@ -56,7 +58,7 @@ export async function createFlightSession(
           <span>PITCH <b data-pitch>0</b>°</span>
           <span>PATH <b data-flight-path>0</b>°</span>
           <span>V/S <b data-vertical-speed>0.0</b> m/s</span>
-          <span>RING <b data-rings>0 / 3</b></span>
+          <span>RING <b data-rings>0 / ${taskRuntime.ringCount}</b></span>
         </div>
 
         <div class="flight-warning" data-flight-warning hidden></div>
@@ -200,7 +202,6 @@ export async function createFlightSession(
     createWorldRuntime(selection.world.id, selection.worldSettings)
   ]);
   const renderer = new SceneRenderer(viewport, selection, worldRuntime);
-  const taskRuntime = createTaskRuntime(selection.task.id);
 
   if (worldRuntime.attribution) {
     attributionElement.textContent = worldRuntime.attribution;

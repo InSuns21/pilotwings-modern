@@ -4,14 +4,22 @@ import {
   DEFAULT_GAME_SELECTION_IDS,
   TASKS,
   WORLDS,
+  getAvailableTasks,
   resolveGameSelection
 } from '../src/game/GameCatalog';
 
 describe('game catalog', () => {
-  it('provides two selectable worlds plus the initial aircraft and task', () => {
+  it('provides two worlds, one aircraft, and world-specific training tasks', () => {
     expect(WORLDS).toHaveLength(2);
     expect(AIRCRAFT).toHaveLength(1);
-    expect(TASKS).toHaveLength(1);
+    expect(TASKS).toHaveLength(2);
+
+    expect(
+      getAvailableTasks('training-island', 'trainer-01').map((task) => task.id)
+    ).toEqual(['island-flight-basics']);
+    expect(
+      getAvailableTasks('matsumoto-real', 'trainer-01').map((task) => task.id)
+    ).toEqual(['matsumoto-pattern-training']);
   });
 
   it('resolves the default start-screen selection', () => {
@@ -23,11 +31,22 @@ describe('game catalog', () => {
     expect(selection.worldSettings.heightExaggeration).toBe(1);
   });
 
+  it('rejects a task that does not belong to the selected world and aircraft', () => {
+    expect(() =>
+      resolveGameSelection({
+        worldId: 'matsumoto-real',
+        aircraftId: 'trainer-01',
+        taskId: 'island-flight-basics'
+      })
+    ).toThrow('is not available');
+  });
+
   it('clamps Matsumoto terrain height exaggeration to the supported range', () => {
     const selection = resolveGameSelection(
       {
-        ...DEFAULT_GAME_SELECTION_IDS,
-        worldId: 'matsumoto-real'
+        worldId: 'matsumoto-real',
+        aircraftId: 'trainer-01',
+        taskId: 'matsumoto-pattern-training'
       },
       {
         heightExaggeration: 9

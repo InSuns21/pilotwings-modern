@@ -1,9 +1,9 @@
 import type { FlightState } from '../flight/ArcadeFlightModel';
 import type { TaskId } from './GameCatalog';
 import {
-  TRAINING_RINGS,
   createTrainingMission,
   failTrainingMission,
+  getTrainingCourse,
   updateTrainingMission,
   type TrainingMissionProgress
 } from './TrainingMission';
@@ -22,13 +22,13 @@ export interface TaskRuntime {
 }
 
 export function createTaskRuntime(taskId: TaskId): TaskRuntime {
-  switch (taskId) {
-    case 'ring-training':
-      return {
-        ringCount: TRAINING_RINGS.length,
-        createProgress: createTrainingMission,
-        updateProgress: updateTrainingMission,
-        failProgress: failTrainingMission
-      };
-  }
+  const course = getTrainingCourse(taskId);
+
+  return {
+    ringCount: course.rings.length,
+    createProgress: () => createTrainingMission(course),
+    updateProgress: (progress, state) =>
+      updateTrainingMission(course, progress, state),
+    failProgress: failTrainingMission
+  };
 }

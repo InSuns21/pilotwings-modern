@@ -2,8 +2,8 @@ import {
   AIRCRAFT,
   DEFAULT_GAME_SELECTION_IDS,
   DEFAULT_WORLD_SETTINGS,
-  TASKS,
   WORLDS,
+  getAvailableTasks,
   resolveGameSelection,
   type AircraftId,
   type CatalogOption,
@@ -26,13 +26,18 @@ export function mountStartScreen(
   root: HTMLElement,
   onStart: (selection: GameSelection) => Promise<void> | void
 ): StartScreenController {
+  const initialTasks = getAvailableTasks(
+    DEFAULT_GAME_SELECTION_IDS.worldId,
+    DEFAULT_GAME_SELECTION_IDS.aircraftId
+  );
+
   root.innerHTML = `
     <main class="start-screen">
       <section class="start-panel" aria-labelledby="start-title">
         <div class="start-brand">
           <span class="start-kicker">ORIGINAL BROWSER FLIGHT GAME</span>
           <h1 id="start-title">PILOTWINGS MODERN</h1>
-          <p>飛ぶ場所、機体、タスクを選んでフライトを開始します。</p>
+          <p>飛ぶ場所と機体を選ぶと、その組み合わせで遊べるタスクが表示されます。</p>
         </div>
 
         <div class="flight-select-grid">
@@ -43,7 +48,7 @@ export function mountStartScreen(
             AIRCRAFT,
             DEFAULT_GAME_SELECTION_IDS.aircraftId
           )}
-          ${selectorMarkup('TASK', 'task', TASKS, DEFAULT_GAME_SELECTION_IDS.taskId)}
+          ${selectorMarkup('TASK', 'task', initialTasks, DEFAULT_GAME_SELECTION_IDS.taskId)}
         </div>
 
         <div class="world-settings" data-world-settings hidden>
@@ -68,7 +73,7 @@ export function mountStartScreen(
           <button class="start-button" type="button" data-start-flight>
             START FLIGHT
           </button>
-          <span class="start-note">WORLDとAIRCRAFTは実3Dプレビューです。</span>
+          <span class="start-note">TASKはWORLD × AIRCRAFTに対応する訓練だけを表示します。</span>
         </div>
       </section>
     </main>
@@ -94,6 +99,26 @@ export function mountStartScreen(
   let worldPreview: StartScreen3dPreview | null = null;
   let aircraftPreview: StartScreen3dPreview | null = null;
 
+  const syncTaskOptions = (): readonly CatalogOption<TaskId>[] => {
+    const availableTasks = getAvailableTasks(
+      worldSelect.value as WorldId,
+      aircraftSelect.value as AircraftId
+    );
+
+    const currentTaskId = taskSelect.value as TaskId;
+    const selectedTaskId =
+      availableTasks.find((task) => task.id === currentTaskId)?.id ??
+      availableTasks[0]?.id;
+
+    if (!selectedTaskId) {
+      throw new Error('No tasks are available for the selected world and aircraft');
+    }
+
+    taskSelect.innerHTML = optionMarkup(availableTasks, selectedTaskId);
+    taskSelect.value = selectedTaskId;
+    return availableTasks;
+  };
+
   const currentSelection = (): GameSelection =>
     resolveGameSelection(
       {
@@ -110,10 +135,11 @@ export function mountStartScreen(
     const worldId = worldSelect.value as WorldId;
     const aircraftId = aircraftSelect.value as AircraftId;
     const taskId = taskSelect.value as TaskId;
+    const availableTasks = getAvailableTasks(worldId, aircraftId);
 
     updateCardText(root, 'world', WORLDS, worldId);
     updateCardText(root, 'aircraft', AIRCRAFT, aircraftId);
-    updateCardText(root, 'task', TASKS, taskId);
+    updateCardText(root, 'task', availableTasks, taskId);
 
     worldSettings.hidden = worldId !== 'matsumoto-real';
 
@@ -144,6 +170,7 @@ export function mountStartScreen(
   };
 
   const onChange = (): void => {
+    syncTaskOptions();
     updateCards();
     updateSummary();
   };
@@ -189,6 +216,7 @@ export function mountStartScreen(
   };
 
   startButton.addEventListener('click', onClick);
+  syncTaskOptions();
   updateCards();
   updateSummary();
 
@@ -215,15 +243,6 @@ function selectorMarkup<Id extends string>(
   options: readonly CatalogOption<Id>[],
   selectedId: Id
 ): string {
-  const optionMarkup = options
-    .map(
-      (option) =>
-        `<option value="${option.id}" ${option.id === selectedId ? 'selected' : ''}>
-          ${option.name}
-        </option>`
-    )
-    .join('');
-
   const selected = options.find((option) => option.id === selectedId) ?? options[0];
   if (!selected) {
     throw new Error(`No options registered for ${kind}`);
@@ -235,11 +254,25 @@ function selectorMarkup<Id extends string>(
       <div class="flight-select-preview" data-preview-${kind}></div>
       <strong data-subtitle-${kind}>${selected.subtitle}</strong>
       <select data-select-${kind} aria-label="${label} selection">
-        ${optionMarkup}
+        ${optionMarkup(options, selected.id)}
       </select>
       <small data-description-${kind}>${selected.description}</small>
     </label>
   `;
+}
+
+function optionMarkup<Id extends string>(
+  options: readonly CatalogOption<Id>[],
+  selectedId: Id
+): string {
+  return options
+    .map(
+      (option) =>
+        `<option value="${option.id}" ${option.id === selectedId ? 'selected' : ''}>
+          ${option.name}
+        </option>`
+    )
+    .join('');
 }
 
 function updateCardText<Id extends string>(
