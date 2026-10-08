@@ -431,6 +431,14 @@ export class SceneRenderer {
       bullseye.rotation.y = Math.PI / 2;
       bullseye.position.set(target.x - 0.07, TARGET_CENTER_Y, target.z);
       board.add(bullseye);
+      // Re-attack can come from either runway direction. Repeat the visible
+      // rings on the back face so the opaque backing never hides the target.
+      const backOuter = outer.clone();
+      backOuter.position.x = target.x + 0.035;
+      board.add(backOuter);
+      const backBullseye = bullseye.clone();
+      backBullseye.position.x = target.x + 0.07;
+      board.add(backBullseye);
 
       const postMaterial = new THREE.MeshStandardMaterial({
         color: 0x3a4545, roughness: 0.9
