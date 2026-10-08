@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { RUNWAY_GROUND_Y, createInitialFlightState, type FlightState } from '../src/flight/ArcadeFlightModel';
 import {
   GROUND_TARGETS,
+  TARGET_CENTER_Y,
+  shotTargetIntersection,
+  isTargetInSight,
   createGroundTargetMission,
   failGroundTargetMission,
   shotGroundIntersection,
@@ -14,7 +17,7 @@ import { isInsideTrainingIsland, isOnRunway, terrainHeightAt } from '../src/worl
 
 function aimingAt(target: GroundTarget, altitude = 55): FlightState {
   const distance = 140;
-  const pitch = -Math.atan2(altitude + RUNWAY_GROUND_Y - 0.24, distance);
+  const pitch = Math.atan2(TARGET_CENTER_Y - altitude - RUNWAY_GROUND_Y, distance);
   return {
     ...createInitialFlightState(),
     onGround: false,
@@ -44,13 +47,17 @@ describe('ground target shooting mission', () => {
     expect(airborne.message).toContain('TARGET 1 / 3');
   });
 
-  it('projects weapon fire from the aircraft nose onto the target surface', () => {
+  it('projects weapon fire from the aircraft nose onto the exact upright target plane', () => {
     const state = aimingAt(GROUND_TARGETS[0]!);
-    const hit = shotGroundIntersection(weaponRay(state));
+    const hit = shotTargetIntersection(weaponRay(state), GROUND_TARGETS[0]!);
     expect(hit).not.toBeNull();
     expect(hit!.x).toBeCloseTo(GROUND_TARGETS[0]!.x, 0);
+    expect(hit!.y).toBeCloseTo(TARGET_CENTER_Y, 0);
     expect(hit!.z).toBeCloseTo(GROUND_TARGETS[0]!.z, 0);
+    expect(isTargetInSight(state, GROUND_TARGETS[0]!)).toBe(true);
     expect(shotGroundIntersection(weaponRay({ ...state, pitch: 0 }))).toBeNull();
+    expect(isTargetInSight({ ...state, heading: Math.PI / 2 }, GROUND_TARGETS[0]!)).toBe(false);
+    expect(shotTargetIntersection(weaponRay({ ...state, heading: Math.PI }), GROUND_TARGETS[0]!)).toBeNull();
   });
 
   it('counts ordered hits and completes after a turning reattack at each target', () => {
