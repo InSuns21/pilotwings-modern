@@ -1,6 +1,6 @@
 export type WorldId = 'training-island' | 'matsumoto-real';
 export type AircraftId = 'trainer-01';
-export type TaskId = 'island-flight-basics' | 'matsumoto-pattern-training';
+export type TaskId = 'island-flight-basics' | 'matsumoto-pattern-training' | 'island-ground-targets';
 
 export interface CatalogOption<Id extends string> {
   readonly id: Id;
@@ -61,6 +61,14 @@ export const TASKS: readonly TaskCatalogOption[] = [
     name: '基礎操縦サーキット',
     subtitle: 'CLIMB / LEVEL / BANK / APPROACH',
     description: '8リングで離陸上昇、水平化、旋回、高度維持、降下、最終進入を順番に練習します。',
+    worldIds: ['training-island'],
+    aircraftIds: ['trainer-01']
+  },
+  {
+    id: 'island-ground-targets',
+    name: '地上ターゲット射撃訓練',
+    subtitle: 'AIM / FIRE / TURN / REATTACK',
+    description: '離陸後、地上の3標的を順番に狙う。機首の照準、高度管理、旋回、再進入を練習します。',
     worldIds: ['training-island'],
     aircraftIds: ['trainer-01']
   },
