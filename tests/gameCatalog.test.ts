@@ -12,14 +12,30 @@ describe('game catalog', () => {
   it('provides two worlds, one aircraft, and world-specific training tasks', () => {
     expect(WORLDS).toHaveLength(2);
     expect(AIRCRAFT).toHaveLength(1);
-    expect(TASKS).toHaveLength(2);
+    expect(TASKS).toHaveLength(3);
 
     expect(
       getAvailableTasks('training-island', 'trainer-01').map((task) => task.id)
-    ).toEqual(['island-flight-basics']);
+    ).toEqual(['island-flight-basics', 'island-ground-targets']);
     expect(
       getAvailableTasks('matsumoto-real', 'trainer-01').map((task) => task.id)
     ).toEqual(['matsumoto-pattern-training']);
+  });
+
+  it('offers target shooting only on the training island with TR-01', () => {
+    const option = TASKS.find((task) => task.id === 'island-ground-targets');
+    expect(option?.worldIds).toEqual(['training-island']);
+    expect(option?.aircraftIds).toEqual(['trainer-01']);
+    expect(resolveGameSelection({
+      worldId: 'training-island',
+      aircraftId: 'trainer-01',
+      taskId: 'island-ground-targets'
+    }).task.id).toBe('island-ground-targets');
+    expect(() => resolveGameSelection({
+      worldId: 'matsumoto-real',
+      aircraftId: 'trainer-01',
+      taskId: 'island-ground-targets'
+    })).toThrow('is not available');
   });
 
   it('resolves the default start-screen selection', () => {
