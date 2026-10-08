@@ -42,6 +42,7 @@ export class TouchInput {
   readonly #yawLeft: HTMLElement;
   readonly #yawRight: HTMLElement;
   readonly #cleanup: Array<() => void> = [];
+  #firePending = false;
 
   #stickPointerId: number | null = null;
   #stickVector: StickVector = { x: 0, y: 0 };
@@ -68,6 +69,15 @@ export class TouchInput {
     this.#bindHoldButton(this.#brake, this.#brakePointers);
     this.#bindHoldButton(this.#yawLeft, this.#yawLeftPointers);
     this.#bindHoldButton(this.#yawRight, this.#yawRightPointers);
+
+    const fire = this.root.querySelector<HTMLElement>('[data-touch-fire]');
+    if (fire) {
+      this.#listen(fire, 'pointerdown', (event) => {
+        if (event.pointerType === 'mouse' && event.button !== 0) return;
+        event.preventDefault();
+        this.#firePending = true;
+      });
+    }
   }
 
   sample(): FlightInput {
@@ -82,11 +92,18 @@ export class TouchInput {
     };
   }
 
+  consumeFire(): boolean {
+    const fire = this.#firePending;
+    this.#firePending = false;
+    return fire;
+  }
+
   dispose(): void {
     for (const cleanup of this.#cleanup.splice(0)) {
       cleanup();
     }
     this.#resetStick();
+    this.#firePending = false;
     this.#thrustPointers.clear();
     this.#brakePointers.clear();
     this.#yawLeftPointers.clear();
