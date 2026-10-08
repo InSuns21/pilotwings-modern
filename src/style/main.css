@@ -997,23 +997,25 @@ button {
 .flight-instruments {
   position: absolute;
   z-index: 10;
-  top: max(18px, env(safe-area-inset-top));
-  right: max(18px, env(safe-area-inset-right));
-  width: 356px;
-  padding: 10px;
-  border: 1px solid #708894;
-  border-radius: 17px;
-  background: linear-gradient(165deg, rgb(28 43 53 / 94%), rgb(9 19 28 / 93%));
-  box-shadow: inset 0 1px 1px rgb(255 255 255 / 14%), 0 12px 30px rgb(0 0 0 / 29%);
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  width: clamp(210px, 26vw, 310px);
+  padding: 6px;
+  border: 1px solid rgb(156 187 195 / 45%);
+  border-radius: 12px;
   color: #edf4e9;
+  background: rgb(12 28 39 / 68%);
+  backdrop-filter: blur(5px);
+  box-shadow: 0 7px 18px rgb(0 0 0 / 18%);
   pointer-events: none;
   font-variant-numeric: tabular-nums;
+  transform: translateX(-50%);
 }
 
 .instrument-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 5px;
+  gap: 4px;
 }
 
 .instrument-gauge {
@@ -1022,28 +1024,28 @@ button {
   flex-direction: column;
   gap: 1px;
   min-width: 0;
-  padding: 5px 3px 7px;
-  border-radius: 11px;
-  background: #192a34;
+  padding: 3px 2px 4px;
+  border-radius: 9px;
+  background: rgb(25 42 52 / 85%);
   box-shadow: inset 0 0 0 1px rgb(175 201 206 / 16%);
 }
 
 .instrument-caption {
   color: #b1c9c5;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 800;
-  letter-spacing: .08em;
+  letter-spacing: .04em;
 }
 
 .instrument-gauge svg {
   display: block;
-  width: min(100%, 104px);
+  width: min(100%, 68px);
   aspect-ratio: 1;
 }
 
 .instrument-gauge strong {
   color: #f8f3da;
-  font-size: 17px;
+  font-size: 14px;
   line-height: 1.1;
   letter-spacing: .04em;
 }
@@ -1056,7 +1058,7 @@ button {
 .attitude-bezel,
 .compass-bezel {
   position: relative;
-  width: min(100%, 104px);
+  width: min(100%, 68px);
   aspect-ratio: 1;
   overflow: hidden;
   border: 4px solid #627b85;
@@ -1151,11 +1153,52 @@ button {
 }
 
 .index-map-panel {
-  margin-top: 8px;
+  position: absolute;
+  z-index: 11;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  width: 225px;
+  margin: 0;
   padding: 8px;
   border: 1px solid #58737c;
   border-radius: 10px;
-  background: #102731;
+  color: #e4f4f2;
+  background: rgb(16 39 49 / 85%);
+  box-shadow: 0 7px 18px rgb(0 0 0 / 19%);
+  pointer-events: auto;
+}
+
+.index-map-panel[data-open="false"] {
+  width: 123px;
+}
+
+.index-map-panel[data-open="false"] .index-map-content {
+  display: none;
+}
+
+.index-map-toggle {
+  padding: 3px 6px;
+  border: 1px solid #63838e;
+  border-radius: 5px;
+  background: #234456;
+  color: #f6f7e9;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.index-map-toggle:focus-visible {
+  outline: 2px solid #ffd36a;
+  outline-offset: 2px;
+}
+
+.index-map-world {
+  display: block;
+  margin-top: 4px;
+  color: #94b6b9;
+  font-size: 9px;
+  letter-spacing: .03em;
 }
 
 .index-map-heading,
@@ -1212,48 +1255,142 @@ button {
   filter: drop-shadow(0 0 5px #3d9f51);
 }
 
-@media (max-width: 1080px) {
-  .flight-instruments {
-    width: 295px;
-    padding: 7px;
-  }
+/* Primary scan: left mission/status, center flight axes, right occasional map. */
+.hud {
+  width: min(320px, calc(100vw - 36px));
+  max-width: none;
+  padding: 10px 12px;
+  gap: 6px;
+  background: rgb(7 17 31 / 69%);
+}
 
-  .instrument-caption { font-size: 8px; }
-  .instrument-gauge strong { font-size: 14px; }
+.hud-title-row strong { font-size: 11px; letter-spacing: .07em; }
+.hud .telemetry { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 7px; }
+.hud .telemetry span { display: block; font-size: 10px; white-space: nowrap; }
+.hud .telemetry b { font-size: 11px; }
+.hud .mission-message {
+  max-width: none;
+  padding: 6px 8px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.hud .hud-actions { gap: 6px; }
+.hud .hud-actions button { padding: 4px 6px; font-size: 10px; }
+
+.flight-reference {
+  padding-top: 3px;
+  border-top: 1px solid rgb(255 255 255 / 13%);
+  color: #b0c9d2;
+  font-size: 10px;
+}
+.flight-reference summary {
+  width: fit-content;
+  cursor: pointer;
+  font-size: 10px;
+  letter-spacing: .06em;
+}
+.flight-reference summary:focus-visible {
+  outline: 2px solid #ffd36a;
+  outline-offset: 2px;
+}
+.flight-reference[open] {
+  max-height: min(220px, 35vh);
+  overflow: auto;
+}
+.flight-reference .session-loadout { margin-top: 8px; }
+.flight-reference .session-loadout span { font-size: 10px; }
+.flight-reference .keyboard-help,
+.flight-reference .touch-help {
+  margin-top: 5px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1100px) {
+  .hud { width: min(270px, calc(34vw - 12px)); padding: 8px 9px; }
+  .hud-title-row strong { font-size: 10px; }
+  .hud .telemetry { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .index-map-panel { width: 205px; }
+}
+
+@media (max-width: 900px) {
+  .hud { width: min(242px, calc(33vw - 8px)); }
+  .flight-instruments { width: clamp(190px, 27vw, 240px); }
+  .instrument-gauge svg,
+  .attitude-bezel,
+  .compass-bezel { width: min(100%, 57px); }
+  .instrument-caption { font-size: 7px; }
+  .instrument-gauge strong { font-size: 12px; }
   .instrument-gauge small { font-size: 8px; }
-  .index-map-heading span { font-size: 7px; }
-  .hud { max-width: min(420px, calc(100vw - 340px)); }
+  .index-map-panel { width: 185px; }
+}
+
+@media (max-width: 760px) and (orientation: landscape) {
+  .hud { width: min(210px, 32vw); }
+  .hud .session-loadout { display: none; }
+  .hud .mission-message { font-size: 10px; }
+  .flight-instruments {
+    top: max(8px, env(safe-area-inset-top));
+    width: clamp(170px, 31vw, 210px);
+    padding: 4px;
+  }
+  .index-map-panel { top: max(8px, env(safe-area-inset-top)); width: 172px; padding: 5px; }
+  .index-map-panel[data-open="false"] { width: 122px; }
+  /* Opening the map should be deliberate; in short landscape flight the
+     collapsed tab remains above the right-hand thrust/yaw controls. */
 }
 
 @media (any-pointer: coarse) and (orientation: landscape) and (max-height: 700px) {
-  .flight-instruments {
-    top: max(9px, env(safe-area-inset-top));
-    right: max(10px, env(safe-area-inset-right));
-    width: min(290px, 34vw);
+  .hud {
+    top: max(8px, env(safe-area-inset-top));
+    left: max(8px, env(safe-area-inset-left));
+    width: min(245px, 31vw);
+    padding: 7px 8px;
   }
-
-  .index-map-panel { padding: 5px; margin-top: 4px; }
-  .instrument-gauge { padding: 2px 1px 3px; }
-  .instrument-gauge strong { font-size: 12px; }
-  .instrument-gauge small { font-size: 7px; }
-  .hud { max-width: min(390px, 49vw); }
+  .hud .telemetry span { display: block; }
+  .hud .mission-phase { display: inline; }
+  .hud .flight-reference summary { display: list-item; }
+  .hud .mission-message { font-size: 10px; }
+  .flight-instruments { top: max(8px, env(safe-area-inset-top)); }
+  .index-map-panel { top: max(8px, env(safe-area-inset-top)); }
 }
 
 @media (max-width: 700px) and (orientation: portrait) {
+  .hud {
+    top: max(8px, env(safe-area-inset-top));
+    left: max(8px, env(safe-area-inset-left));
+    width: min(290px, calc(100vw - 16px));
+    padding: 8px;
+  }
+  .hud .session-loadout { display: none; }
+  .hud .telemetry { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .flight-instruments {
     top: auto;
-    right: max(8px, env(safe-area-inset-right));
-    bottom: max(225px, calc(env(safe-area-inset-bottom) + 195px));
-    width: min(214px, 52vw);
+    bottom: max(220px, calc(env(safe-area-inset-bottom) + 194px));
+    left: 50%;
+    width: min(290px, calc(100vw - 24px));
     padding: 5px;
   }
+  .instrument-gauge svg,
+  .attitude-bezel,
+  .compass-bezel { width: min(100%, 66px); }
+  .index-map-panel {
+    top: max(205px, calc(env(safe-area-inset-top) + 185px));
+    right: max(8px, env(safe-area-inset-right));
+    width: min(245px, calc(100vw - 16px));
+    padding: 6px;
+  }
+  .index-map-panel[data-open="false"] { width: 123px; }
+}
 
-  .instrument-row { gap: 2px; }
-  .instrument-caption { font-size: 6px; }
-  .instrument-gauge { padding: 3px 1px; }
-  .instrument-gauge strong { font-size: 11px; }
-  .instrument-gauge small { font-size: 7px; }
-  .index-map-panel { padding: 5px; }
-  .index-map-heading span { display: none; }
-  .hud { max-width: calc(100vw - 24px); }
+@media (max-width: 370px) and (orientation: portrait) {
+  .hud { width: calc(100vw - 16px); }
+  .hud .telemetry { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .flight-instruments { bottom: max(205px, calc(env(safe-area-inset-bottom) + 185px)); }
+}
+
+@media (max-height: 540px) and (orientation: landscape) {
+  .index-map-panel[data-open="true"] {
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+  }
 }

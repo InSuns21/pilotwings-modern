@@ -109,7 +109,9 @@ export function instrumentPanelMarkup(selection: GameSelection): string {
     const y2 = 60 - Math.cos(angle) * (index % 2 === 0 ? 35 : 39);
     return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#d8e6e1" stroke-width="${index % 2 === 0 ? 2 : 1}"/>`;
   }).join('');
-  return `<aside class="flight-instruments" aria-label="飛行計器・ワールド全体マップ">
+  // The glance instruments and navigation map are separate overlays: the
+  // flight path stays clear, and checking speed/bank needs only a short saccade.
+  return `<aside class="flight-instruments" aria-label="飛行計器">
     <div class="instrument-row">
       <section class="instrument-gauge">
         <span class="instrument-caption">AIRSPEED</span>
@@ -152,11 +154,14 @@ export function instrumentPanelMarkup(selection: GameSelection): string {
         <strong data-gauge-heading>000°</strong><small>${geographic ? 'TRUE NORTH' : '+X = 000°'}</small>
       </section>
     </div>
-    <section class="index-map-panel" aria-label="全体索引図">
-      <div class="index-map-heading">
-        <strong>FLIGHT INDEX</strong>
-        <span>${geographic ? 'MATSUMOTO · LOCAL GRID' : 'TRAINING ISLAND · LOCAL GRID'}</span>
-      </div>
+  </aside>
+  <section class="index-map-panel" data-index-map aria-label="全体索引図">
+    <div class="index-map-heading">
+      <strong>FLIGHT INDEX</strong>
+      <button type="button" class="index-map-toggle" data-map-toggle aria-expanded="true" aria-controls="flight-index-content" aria-label="全体マップの表示切替">HIDE · M</button>
+    </div>
+    <div class="index-map-content" id="flight-index-content">
+      <span class="index-map-world">${geographic ? 'MATSUMOTO · LOCAL GRID' : 'TRAINING ISLAND · LOCAL GRID'}</span>
       <svg class="index-map" viewBox="0 0 ${MAP_WIDTH} ${MAP_HEIGHT}" role="img"
         aria-label="機体の現在位置と残りのリングまたは標的">
         <rect width="${MAP_WIDTH}" height="${MAP_HEIGHT}" fill="#122b37"/>
@@ -170,8 +175,8 @@ export function instrumentPanelMarkup(selection: GameSelection): string {
         </g>
       </svg>
       <div class="map-footer"><span data-map-status>POS READY</span><span>+X → · +Z ↓</span></div>
-    </section>
-  </aside>`;
+    </div>
+  </section>`;
 }
 
 function worldIdFromSelection(selection: GameSelection): WorldId {
@@ -180,6 +185,7 @@ function worldIdFromSelection(selection: GameSelection): WorldId {
 
 export interface FlightInstrumentPanel {
   update(state: FlightState, progress: TaskProgress): void;
+  dispose(): void;
 }
 
 export function mountFlightInstruments(
@@ -197,8 +203,39 @@ export function mountFlightInstruments(
   const plane = root.querySelector<SVGGElement>('[data-map-aircraft]')!;
   const mapStatus = root.querySelector<HTMLElement>('[data-map-status]')!;
   const objectiveNodes = [...root.querySelectorAll<SVGGElement>('[data-objective-index]')];
+  const map = root.querySelector<HTMLElement>('[data-index-map]')!;
+  const toggle = root.querySelector<HTMLButtonElement>('[data-map-toggle]')!;
+  // On narrow and portrait screens a large map obstructs flight targets. Show
+  // the map tab instead and let the pilot reveal it explicitly when needed.
+  let mapOpen = !window.matchMedia(
+    '(max-width: 760px), (orientation: portrait) and (max-width: 1100px)'
+  ).matches;
+  const setMapOpen = (open: boolean): void => {
+    mapOpen = open;
+    map.dataset.open = String(open);
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.textContent = open ? 'HIDE · M' : 'OPEN · M';
+  };
+  const onToggle = (): void => setMapOpen(!mapOpen);
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (event.code !== 'KeyM' || event.repeat || event.altKey || event.ctrlKey || event.metaKey) {
+      return;
+    }
+    if (event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) {
+      return;
+    }
+    event.preventDefault();
+    onToggle();
+  };
+  setMapOpen(mapOpen);
+  toggle.addEventListener('click', onToggle);
+  window.addEventListener('keydown', onKeyDown);
 
   return {
+    dispose() {
+      toggle.removeEventListener('click', onToggle);
+      window.removeEventListener('keydown', onKeyDown);
+    },
     update(state, progress) {
       const kmh = Math.round(state.speed * 3.6);
       const pitchDeg = state.pitch * 180 / Math.PI;

@@ -43,15 +43,6 @@ export async function createFlightSession(
           <span class="mission-phase" data-phase>TAKEOFF</span>
         </div>
 
-        <div class="session-loadout">
-          <span>WORLD <b>${selection.world.name}</b></span>
-          ${selection.world.id === 'matsumoto-real'
-            ? `<span>RELIEF <b>${selection.worldSettings.heightExaggeration.toFixed(2)}×</b></span>`
-            : ''}
-          <span>AIRCRAFT <b>${selection.aircraft.name}</b></span>
-          <span>TASK <b>${selection.task.name}</b></span>
-        </div>
-
         <div class="telemetry">
           <span>ALT <b data-altitude>0</b> m</span>
           <span>PITCH <b data-pitch>0</b>°</span>
@@ -67,6 +58,21 @@ export async function createFlightSession(
           THRUSTで加速し、機首を上げて離陸
         </div>
 
+        <div class="hud-actions">
+          <button type="button" data-reset>RESTART MISSION</button>
+          <button type="button" data-exit-title>TITLE</button>
+        </div>
+        <details class="flight-reference">
+          <summary>CONTROLS / SESSION</summary>
+        <div class="session-loadout">
+          <span>WORLD <b>${selection.world.name}</b></span>
+          ${selection.world.id === 'matsumoto-real'
+            ? `<span>RELIEF <b>${selection.worldSettings.heightExaggeration.toFixed(2)}×</b></span>`
+            : ''}
+          <span>AIRCRAFT <b>${selection.aircraft.name}</b></span>
+          <span>TASK <b>${selection.task.name}</b></span>
+        </div>
+
         <span class="keyboard-help">
           ↑↓ pitch · A/D roll · Q/E yaw · Space thrust · Shift brake${shootingTask ? ' · F fire' : ''}
         </span>
@@ -74,10 +80,7 @@ export async function createFlightSession(
           左スティック: pitch / roll · 右: yaw / thrust / brake${shootingTask ? ' / fire' : ''}
         </span>
 
-        <div class="hud-actions">
-          <button type="button" data-reset>RESTART MISSION</button>
-          <button type="button" data-exit-title>TITLE</button>
-        </div>
+        </details>
       </aside>
 
       <div data-flight-instruments></div>
@@ -90,7 +93,6 @@ export async function createFlightSession(
         <span class="reticle-wing reticle-wing-right"></span>
       </div>
 
-      <div class="camera-note" aria-hidden="true">CAMERA: LEVEL CHASE · FORWARD ↑</div>
       <div class="world-attribution" data-world-attribution hidden></div>
 
       <div class="game-over-panel" data-game-over hidden>
@@ -269,6 +271,7 @@ export async function createFlightSession(
     gameOverTitle.removeEventListener('click', exitToTitle);
     keyboardInput.dispose();
     touchInput.dispose();
+    instruments.dispose();
     renderer.dispose();
   };
 
