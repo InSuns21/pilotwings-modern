@@ -2,6 +2,7 @@ import type { FlightInput } from './FlightInput';
 
 export class KeyboardInput {
   readonly #pressed = new Set<string>();
+  #firePending = false;
 
   constructor(private readonly target: Window = window) {
     target.addEventListener('keydown', this.#onKeyDown);
@@ -20,11 +21,18 @@ export class KeyboardInput {
     };
   }
 
+  consumeFire(): boolean {
+    const fire = this.#firePending;
+    this.#firePending = false;
+    return fire;
+  }
+
   dispose(): void {
     this.target.removeEventListener('keydown', this.#onKeyDown);
     this.target.removeEventListener('keyup', this.#onKeyUp);
     this.target.removeEventListener('blur', this.#onBlur);
     this.#pressed.clear();
+    this.#firePending = false;
   }
 
   #axis(negativeKey: string, positiveKey: string): number {
@@ -34,6 +42,9 @@ export class KeyboardInput {
   }
 
   #onKeyDown = (event: KeyboardEvent): void => {
+    if (event.code === 'KeyF' && !this.#pressed.has('KeyF')) {
+      this.#firePending = true;
+    }
     this.#pressed.add(event.code);
     if (
       event.code === 'Space' ||
@@ -51,5 +62,6 @@ export class KeyboardInput {
 
   #onBlur = (): void => {
     this.#pressed.clear();
+    this.#firePending = false;
   };
 }
