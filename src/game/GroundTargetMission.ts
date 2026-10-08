@@ -109,6 +109,21 @@ export function shotTargetIntersection(
   return point;
 }
 
+export function validShotEnvelope(state: FlightState): boolean {
+  return !state.onGround &&
+    !state.stalled &&
+    state.speed >= MIN_FIRE_SPEED &&
+    state.position.y - RUNWAY_GROUND_Y >= MIN_FIRE_ALTITUDE &&
+    state.position.y - RUNWAY_GROUND_Y <= MAX_FIRE_ALTITUDE;
+}
+
+export function isTargetInSight(state: FlightState, target: GroundTarget): boolean {
+  const impact = shotTargetIntersection(weaponRay(state), target);
+  return validShotEnvelope(state) &&
+    impact !== null &&
+    Math.hypot(impact.y - TARGET_CENTER_Y, impact.z - target.z) <= target.radius;
+}
+
 export function createGroundTargetMission(): GroundTargetProgress {
   return {
     kind: 'ground-targets',
@@ -153,18 +168,8 @@ export function updateGroundTargetMission(
   const ray = weaponRay(state);
   const target = GROUND_TARGETS[progress.hitCount];
   const intersection = target ? shotTargetIntersection(ray, target) : null;
-  const validEnvelope =
-    !state.onGround &&
-    !state.stalled &&
-    state.speed >= MIN_FIRE_SPEED &&
-    state.position.y - RUNWAY_GROUND_Y >= MIN_FIRE_ALTITUDE &&
-    state.position.y - RUNWAY_GROUND_Y <= MAX_FIRE_ALTITUDE;
-  const hit = Boolean(
-    validEnvelope &&
-    intersection &&
-    target &&
-    Math.hypot(intersection.y - TARGET_CENTER_Y, intersection.z - target.z) <= target.radius
-  );
+  const validEnvelope = validShotEnvelope(state);
+  const hit = Boolean(target && isTargetInSight(state, target));
   const shotsFired = progress.shotsFired + 1;
   const hitCount = progress.hitCount + (hit ? 1 : 0);
   const end = (hit ? intersection : shotGroundIntersection(ray)) ?? {
