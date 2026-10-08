@@ -52,7 +52,12 @@ describe('flight-deck instruments', () => {
     });
     const html = instrumentPanelMarkup(selection);
     // The instrument strip must close before the independently positioned map.
-    expect(html).toMatch(/class="instrument-row"[\\s\\S]*?<\\/aside>\\s*<section class="index-map-panel"/);
+    const stripStart = html.indexOf('class="instrument-row"');
+    const stripEnd = html.indexOf('</aside>', stripStart);
+    const mapStart = html.indexOf('<section class="index-map-panel"', stripEnd);
+    expect(stripStart).toBeGreaterThan(-1);
+    expect(stripEnd).toBeGreaterThan(stripStart);
+    expect(mapStart).toBeGreaterThan(stripEnd);
     expect(html).toContain('data-map-toggle');
     expect(html).toContain('aria-expanded="true"');
     expect(html).toContain('aria-controls="flight-index-content"');
